@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Plus, Settings, Lock, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Settings, Lock, Calendar as CalendarIcon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ARABIC_DAYS, ARABIC_MONTHS } from '../utils/dateUtils';
 
@@ -30,8 +30,8 @@ export const Header: React.FC = () => {
           
           {/* Logo & Brand */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-500/20 text-slate-950 ring-2 ring-amber-300 shrink-0">
-              <Shield className="w-5 h-5 sm:w-7 sm:h-7 stroke-[2.2]" />
+            <div className="relative flex items-center justify-center w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-slate-950 p-1 shadow-md shadow-amber-500/10 ring-2 ring-amber-400 shrink-0 overflow-hidden">
+              <img src="/logo.png" alt="SAFE ZONE" className="w-full h-full object-contain" />
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               </div>

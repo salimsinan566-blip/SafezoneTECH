@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Delete } from 'lucide-react';
+import { Lock, Delete } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const PinLockModal: React.FC = () => {
@@ -34,9 +34,9 @@ export const PinLockModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-amber-300/40 text-center">
         
-        {/* Brand Shield Logo */}
-        <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-amber-400 to-amber-500 shadow-lg shadow-amber-500/25 flex items-center justify-center text-slate-950 mb-4 ring-4 ring-amber-200">
-          <Shield className="w-9 h-9 stroke-[2.2]" />
+        {/* Brand Logo */}
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-slate-950 shadow-lg shadow-amber-500/20 p-2 flex items-center justify-center mb-4 ring-4 ring-amber-300">
+          <img src="/logo.png" alt="SAFE ZONE" className="w-full h-full object-contain" />
         </div>
 
         <h2 className="text-xl font-black text-slate-900 mb-1">
