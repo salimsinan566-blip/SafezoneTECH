@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SAFE ZONE</string>
+    <string name="title_activity_main">SAFE ZONE</string>
+    <string name="package_name">com.safezone.technician</string>
+    <string name="custom_url_scheme">com.safezone.technician</string>
+</resources>
