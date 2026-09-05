@@ -16,26 +16,36 @@ CREATE TABLE IF NOT EXISTS appointments (
     service_id TEXT,
     service_name TEXT NOT NULL,
     cameras_count INTEGER DEFAULT 0,
+    technician_name TEXT,
+    technician_id TEXT,
     notes TEXT,
     is_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- إضافة الأعمدة للجداول الموجودة مسبقاً إن وجدت
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS technician_name TEXT;
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS technician_id TEXT;
+
 -- فهرس لتسريع استعلامات التقويم
 CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);
 
--- 2. إنشاء جدول إعدادات الدوام وباقات الكاميرات (Settings)
+-- 2. إنشاء جدول إعدادات الدوام وباقات الكاميرات والفنيين (Settings)
 CREATE TABLE IF NOT EXISTS work_settings (
     id TEXT PRIMARY KEY DEFAULT 'global_settings',
     work_start_time TEXT DEFAULT '08:00',
     work_end_time TEXT DEFAULT '18:00',
     days_off JSONB DEFAULT '[5]'::jsonb,
     service_packages JSONB,
+    technicians JSONB,
     pin_code TEXT DEFAULT '1234',
     is_pin_enabled BOOLEAN DEFAULT FALSE,
     thresholds JSONB,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- إضافة عمود الفنيين لجدول الإعدادات إن كان موجوداً
+ALTER TABLE work_settings ADD COLUMN IF NOT EXISTS technicians JSONB;
 
 -- 3. تفعيل الأمان (RLS)
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;

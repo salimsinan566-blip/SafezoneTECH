@@ -1,5 +1,10 @@
-import { Appointment, ServicePackage, WorkSettings } from '../types';
+import { Appointment, ServicePackage, Technician, WorkSettings } from '../types';
 import { formatDateKey } from './dateUtils';
+
+export const DEFAULT_TECHNICIANS: Technician[] = [
+  { id: 'tech-1', name: 'سالم سنان' },
+  { id: 'tech-2', name: 'فني التركيب (فريق 1)' },
+];
 
 export const DEFAULT_SERVICE_PACKAGES: ServicePackage[] = [
   {
@@ -44,6 +49,7 @@ export const DEFAULT_SETTINGS: WorkSettings = {
   workEndTime: '18:00',
   daysOff: [5], // Friday
   servicePackages: DEFAULT_SERVICE_PACKAGES,
+  technicians: DEFAULT_TECHNICIANS,
   pinCode: '1234',
   isPinEnabled: false,
   thresholds: {
@@ -64,7 +70,11 @@ export function loadSettings(): WorkSettings {
     const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      technicians: parsed.technicians || DEFAULT_TECHNICIANS,
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }

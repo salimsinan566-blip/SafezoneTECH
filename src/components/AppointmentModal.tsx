@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Calendar,
+  Wrench,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ServicePackage } from '../types';
@@ -47,6 +48,9 @@ export const AppointmentModal: React.FC = () => {
   );
   const [durationHours, setDurationHours] = useState<number>(
     editingAppointment?.durationHours ?? (settings.servicePackages[0]?.durationHours || 3.0)
+  );
+  const [technicianName, setTechnicianName] = useState(
+    editingAppointment?.technicianName || settings.technicians?.[0]?.name || ''
   );
   const [notes, setNotes] = useState(editingAppointment?.notes || '');
   const [isCompleted, setIsCompleted] = useState(editingAppointment?.isCompleted || false);
@@ -88,6 +92,7 @@ export const AppointmentModal: React.FC = () => {
       serviceId: selectedServiceId,
       serviceName,
       camerasCount: Number(camerasCount),
+      technicianName: technicianName.trim(),
       notes: notes.trim(),
       isCompleted,
     };
@@ -288,6 +293,33 @@ export const AppointmentModal: React.FC = () => {
                 <Phone className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
               </div>
             </div>
+          </div>
+
+          {/* Technician Assignment */}
+          <div>
+            <label className="block text-xs font-black text-slate-700 mb-1">
+              الفني المسؤول عن تنفيذ العملية:
+            </label>
+            <div className="relative">
+              <select
+                value={technicianName}
+                onChange={(e) => setTechnicianName(e.target.value)}
+                className="w-full pr-9 pl-3 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none"
+              >
+                <option value="">-- لم يتم تحديد فني (عام) --</option>
+                {(settings.technicians || []).map((t) => (
+                  <option key={t.id} value={t.name}>
+                    👷 {t.name}
+                  </option>
+                ))}
+              </select>
+              <Wrench className="w-4 h-4 text-slate-400 absolute right-3 top-3.5 pointer-events-none" />
+            </div>
+            {(!settings.technicians || settings.technicians.length === 0) && (
+              <p className="text-[11px] font-semibold text-amber-700 mt-1">
+                * يمكنك إضافة وتعديل أسماء الفنيين العاملين في شركتك من شاشة الإعدادات ⚙️
+              </p>
+            )}
           </div>
 
           {/* Location / Address */}

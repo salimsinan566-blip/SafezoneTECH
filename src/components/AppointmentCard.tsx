@@ -85,6 +85,14 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 </span>
               )}
             </span>
+
+            {/* Technician Badge */}
+            {appointment.technicianName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-black bg-slate-100 text-slate-800 border border-slate-200">
+                <span>👷 الفني:</span>
+                <span className="text-amber-900 font-extrabold">{appointment.technicianName}</span>
+              </span>
+            )}
           </div>
 
           {showDate && (

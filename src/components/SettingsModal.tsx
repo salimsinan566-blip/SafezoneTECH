@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Save,
   Check,
+  UserCheck,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ServicePackage, WorkSettings } from '../types';
@@ -33,9 +34,35 @@ export const SettingsModal: React.FC = () => {
   const [newPkgCameras, setNewPkgCameras] = useState<number>(4);
   const [newPkgDuration, setNewPkgDuration] = useState<number>(3.0);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [newTechName, setNewTechName] = useState('');
 
   // Daily hours calculation
   const dailyHours = calculateDailyMaxHours(formData.workStartTime, formData.workEndTime);
+
+  // Add new technician
+  const handleAddTechnician = () => {
+    if (!newTechName.trim()) {
+      alert('يرجى إدخال اسم الفني');
+      return;
+    }
+    const newTech = {
+      id: 'tech-' + Date.now(),
+      name: newTechName.trim(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      technicians: [...(prev.technicians || []), newTech],
+    }));
+    setNewTechName('');
+  };
+
+  // Remove technician
+  const handleRemoveTechnician = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      technicians: (prev.technicians || []).filter((t) => t.id !== id),
+    }));
+  };
 
   // Add new service package rule
   const handleAddPackage = () => {
@@ -353,7 +380,84 @@ export const SettingsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 3: PIN Lock Security */}
+          {/* Section 3: Technicians Management */}
+          <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-xl bg-amber-500 text-slate-950 font-black">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    إدارة الفنيين وفريق العمل:
+                  </h4>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    أضف أسماء الفنيين لتتمكن من تحديد الفني المسؤول عند تسجيل كل موعد
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Add Technician Form */}
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="اكتب اسم الفني (مثال: علي جاسم)"
+                value={newTechName}
+                onChange={(e) => setNewTechName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTechnician();
+                  }
+                }}
+                className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddTechnician}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-sm shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>إضافة فني</span>
+              </button>
+            </div>
+
+            {/* Technicians List */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {(formData.technicians || []).map((tech) => (
+                <div
+                  key={tech.id}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-xs font-black text-amber-900 shrink-0">
+                      👷
+                    </span>
+                    <span className="text-xs font-black text-slate-800 truncate">
+                      {tech.name}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTechnician(tech.id)}
+                    title="حذف هذا الفني"
+                    className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              {(formData.technicians || []).length === 0 && (
+                <p className="text-xs font-bold text-slate-400 col-span-2 text-center py-2 italic">
+                  لم يتم إضافة أي فني بعد. أضف أسماء الفنيين بالأعلى.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Section 4: PIN Lock Security */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">

@@ -7,6 +7,12 @@ export interface ServicePackage {
   description?: string;
 }
 
+export interface Technician {
+  id: string;
+  name: string;
+  phone?: string;
+}
+
 export interface Appointment {
   id: string;
   customerName: string;
@@ -19,6 +25,8 @@ export interface Appointment {
   serviceId: string;
   serviceName: string;
   camerasCount: number;
+  technicianName?: string; // اسم الفني المكلف بالعملية
+  technicianId?: string;
   notes?: string;
   isCompleted: boolean; // خانة التدقيق: صح اكتمل
   createdAt: string;
@@ -29,6 +37,7 @@ export interface WorkSettings {
   workEndTime: string; // e.g. "18:00"
   daysOff: number[]; // 5 for Friday, etc.
   servicePackages: ServicePackage[];
+  technicians: Technician[]; // قائمة الفنيين العاملين
   pinCode: string;
   isPinEnabled: boolean;
   thresholds: {
