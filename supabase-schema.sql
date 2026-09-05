@@ -1,9 +1,9 @@
 -- ==========================================================
 -- SAFE ZONE - مخطط قاعدة بيانات Supabase (SQL Schema)
--- الصق هذه الأوامر في: Supabase Dashboard > SQL Editor > Run
+-- امسح كل شيء في الـ SQL Editor والصق هذا الكود بالكامل ثم Run
 -- ==========================================================
 
--- 1. جدول المواعيد والعمليات (Appointments)
+-- 1. إنشاء جدول المواعيد والعمليات (Appointments)
 CREATE TABLE IF NOT EXISTS appointments (
     id TEXT PRIMARY KEY,
     customer_name TEXT NOT NULL,
@@ -21,10 +21,10 @@ CREATE TABLE IF NOT EXISTS appointments (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- فهرس لتسريع البحث حسب التاريخ
+-- فهرس لتسريع استعلامات التقويم
 CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);
 
--- 2. جدول إعدادات الدوام وباقات الكاميرات (Settings)
+-- 2. إنشاء جدول إعدادات الدوام وباقات الكاميرات (Settings)
 CREATE TABLE IF NOT EXISTS work_settings (
     id TEXT PRIMARY KEY DEFAULT 'global_settings',
     work_start_time TEXT DEFAULT '08:00',
@@ -37,11 +37,21 @@ CREATE TABLE IF NOT EXISTS work_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. تفعيل الأمان وسياسات الوصول العام عبر Anon Key
+-- 3. تفعيل الأمان (RLS)
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE work_settings ENABLE ROW LEVEL SECURITY;
 
--- سياسة السماح بالقراءة والكتابة للـ Anon (الوصول من التطبيق والموقع)
+-- حذف السياسات القديمة إن وجدت لتجنب أي تكرار
+DROP POLICY IF EXISTS "Allow anon read appointments" ON appointments;
+DROP POLICY IF EXISTS "Allow anon insert appointments" ON appointments;
+DROP POLICY IF EXISTS "Allow anon update appointments" ON appointments;
+DROP POLICY IF EXISTS "Allow anon delete appointments" ON appointments;
+
+DROP POLICY IF EXISTS "Allow anon read settings" ON work_settings;
+DROP POLICY IF EXISTS "Allow anon insert settings" ON work_settings;
+DROP POLICY IF EXISTS "Allow anon update settings" ON work_settings;
+
+-- إنشاء سياسات السماح للوصول العام
 CREATE POLICY "Allow anon read appointments" ON appointments FOR SELECT USING (true);
 CREATE POLICY "Allow anon insert appointments" ON appointments FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anon update appointments" ON appointments FOR UPDATE USING (true);
@@ -51,7 +61,7 @@ CREATE POLICY "Allow anon read settings" ON work_settings FOR SELECT USING (true
 CREATE POLICY "Allow anon insert settings" ON work_settings FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anon update settings" ON work_settings FOR UPDATE USING (true);
 
--- 4. إدخال الإعدادات الافتراضية إذا لم تكن موجودة
+-- 4. إدخال الإعدادات الافتراضية
 INSERT INTO work_settings (id, work_start_time, work_end_time, days_off, service_packages, pin_code, is_pin_enabled, thresholds)
 VALUES (
     'global_settings',
