@@ -25,8 +25,9 @@ export interface Appointment {
   serviceId: string;
   serviceName: string;
   camerasCount: number;
-  technicianName?: string; // اسم الفني المكلف بالعملية
+  technicianName?: string; // اسم الفني أو الفنيين المكلفين
   technicianId?: string;
+  technicians?: string[]; // قائمة أسماء الفنيين المكلفين بالعملية
   notes?: string;
   isCompleted: boolean; // خانة التدقيق: صح اكتمل
   createdAt: string;

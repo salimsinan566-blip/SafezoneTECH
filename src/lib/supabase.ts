@@ -39,6 +39,9 @@ export function mapRowToAppointment(row: any): Appointment {
     camerasCount: Number(row.cameras_count) || 0,
     technicianName: row.technician_name || '',
     technicianId: row.technician_id || '',
+    technicians: row.technician_name
+      ? String(row.technician_name).split(/[,،]/).map((s) => s.trim()).filter(Boolean)
+      : [],
     notes: row.notes || '',
     isCompleted: Boolean(row.is_completed),
     createdAt: row.created_at || new Date().toISOString(),
@@ -47,6 +50,11 @@ export function mapRowToAppointment(row: any): Appointment {
 
 // Convert Appointment camelCase to database snake_case
 export function mapAppointmentToRow(apt: Appointment) {
+  const combinedTechNames =
+    apt.technicians && apt.technicians.length > 0
+      ? apt.technicians.join('، ')
+      : (apt.technicianName || '');
+
   return {
     id: apt.id,
     customer_name: apt.customerName,
@@ -59,7 +67,7 @@ export function mapAppointmentToRow(apt: Appointment) {
     service_id: apt.serviceId,
     service_name: apt.serviceName,
     cameras_count: apt.camerasCount,
-    technician_name: apt.technicianName || '',
+    technician_name: combinedTechNames,
     technician_id: apt.technicianId || '',
     notes: apt.notes,
     is_completed: apt.isCompleted,

@@ -86,13 +86,25 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
               )}
             </span>
 
-            {/* Technician Badge */}
-            {appointment.technicianName && (
+            {/* Technicians Badges */}
+            {appointment.technicians && appointment.technicians.length > 0 ? (
+              <div className="flex items-center gap-1 flex-wrap">
+                {appointment.technicians.map((tech) => (
+                  <span
+                    key={tech}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-black bg-slate-100 text-slate-800 border border-slate-200"
+                  >
+                    <span>👷</span>
+                    <span className="text-amber-900 font-extrabold">{tech}</span>
+                  </span>
+                ))}
+              </div>
+            ) : appointment.technicianName ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-black bg-slate-100 text-slate-800 border border-slate-200">
                 <span>👷 الفني:</span>
                 <span className="text-amber-900 font-extrabold">{appointment.technicianName}</span>
               </span>
-            )}
+            ) : null}
           </div>
 
           {showDate && (
