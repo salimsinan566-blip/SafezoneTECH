@@ -4,7 +4,14 @@ import { useApp } from '../context/AppContext';
 import { ARABIC_DAYS, ARABIC_MONTHS } from '../utils/dateUtils';
 
 export const Header: React.FC = () => {
-  const { openNewAppointment, setActiveModal, settings, lockApp, appointments } = useApp();
+  const {
+    openNewAppointment,
+    setActiveModal,
+    settings,
+    lockApp,
+    appointments,
+    isSupabaseConnected,
+  } = useApp();
 
   const today = new Date();
   const dayName = ARABIC_DAYS[today.getDay()];
@@ -38,10 +45,26 @@ export const Header: React.FC = () => {
                 <span className="px-1.5 py-0.5 text-[10px] sm:text-xs font-bold rounded-md bg-amber-100 text-amber-900 border border-amber-300 hidden xs:inline">
                   أنظمة أمنية
                 </span>
+
+                {/* Cloud Connection Badge */}
+                {isSupabaseConnected ? (
+                  <span
+                    title="متصل بقاعدة بيانات Supabase السحابية بنجاح"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>سحابي متصل</span>
+                  </span>
+                ) : (
+                  <span
+                    title="يعمل في الوضع المحلي (LocalStorage)"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                    <span>محلي</span>
+                  </span>
+                )}
               </div>
-              <p className="hidden sm:block text-xs font-semibold text-slate-500">
-                إدارة مواعيد وعمليات تركيب كاميرات المراقبة
-              </p>
             </div>
           </div>
 

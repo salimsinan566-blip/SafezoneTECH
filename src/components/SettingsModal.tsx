@@ -19,7 +19,14 @@ import { calculateDailyMaxHours } from '../utils/dateUtils';
 import { DEFAULT_SERVICE_PACKAGES, DEFAULT_SETTINGS } from '../utils/storage';
 
 export const SettingsModal: React.FC = () => {
-  const { settings, updateSettings, closeModals, appointments, showNotification } = useApp();
+  const {
+    settings,
+    updateSettings,
+    closeModals,
+    appointments,
+    showNotification,
+    isSupabaseConnected,
+  } = useApp();
 
   const [formData, setFormData] = useState<WorkSettings>(() => JSON.parse(JSON.stringify(settings)));
   const [newPkgName, setNewPkgName] = useState('');
@@ -392,7 +399,35 @@ export const SettingsModal: React.FC = () => {
             )}
           </div>
 
-          {/* Section 4: Data Backup & Restore */}
+          {/* Section 4: Cloud Status */}
+          <div className="p-4 rounded-2xl border bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-black text-slate-900">
+                  حالة المزامنة السحابية (Supabase Cloud):
+                </h4>
+                <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
+                  {isSupabaseConnected
+                    ? 'متصل بقاعدة البيانات السحابية - المزامنة فورية بين جميع الأجهزة'
+                    : 'التطبيق يعمل في الوضع المحلي (LocalStorage)'}
+                </p>
+              </div>
+
+              {isSupabaseConnected ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>متصل بنجاح ✓</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-600 border border-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span>وضع محلي</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Section 5: Data Backup & Restore */}
           <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-black text-slate-900">
