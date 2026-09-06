@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, ChevronDown, ChevronUp, Clock, Calendar, CheckCircle2, User, Lock, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -66,35 +66,69 @@ export const DayDetailsModal: React.FC = () => {
     );
   };
 
-  // Generate hours list
+  // Generate hours list with quarter-hour resolution
   const hoursList = [];
   for (let h = startHour; h < endHour; h++) {
     const hourStr = String(h).padStart(2, '0');
-    const nextHourStr = String(h + 1).padStart(2, '0');
     const slotStart = `${hourStr}:00`;
-    const slotEnd = `${nextHourStr}:00`;
 
-    // Check if the entire hour or any part has an appointment
-    const overlapApt = getOverlappingAppointment(slotStart, slotEnd);
+    // 4 Quarter hours in this hour
+    const quarters = ['00', '15', '30', '45'].map((m) => {
+      const qStart = `${hourStr}:${m}`;
+      const qEnd = addMinutesToTime(qStart, 15);
+      const bookedApt = getOverlappingAppointment(qStart, qEnd);
+      return {
+        minute: m,
+        time: qStart,
+        endTime: qEnd,
+        isBooked: Boolean(bookedApt),
+        bookedApt,
+      };
+    });
+
+    const bookedQuarters = quarters.filter((q) => q.isBooked);
+    const freeQuarters = quarters.filter((q) => !q.isBooked);
+
+    const isFullyBooked = freeQuarters.length === 0;
+    const isPartiallyBooked = bookedQuarters.length > 0 && freeQuarters.length > 0;
+    const isCompletelyFree = bookedQuarters.length === 0;
+
+    const firstFreeSlot = freeQuarters[0]?.time || slotStart;
+    const remainingMinutes = freeQuarters.length * 15;
 
     hoursList.push({
       hour: h,
       slotStart,
-      slotEnd,
-      overlapApt,
+      quarters,
+      bookedQuarters,
+      freeQuarters,
+      isFullyBooked,
+      isPartiallyBooked,
+      isCompletelyFree,
+      firstFreeSlot,
+      remainingMinutes,
     });
   }
 
   // Handle booking an available time
   const handleSlotClick = (startTime: string) => {
-    const duration = activePreset.durationMinutes;
-    const endTime = addMinutesToTime(startTime, duration);
+    let duration = activePreset.durationMinutes;
+    let endTime = addMinutesToTime(startTime, duration);
 
-    // Check if conflicting
-    const conflict = getOverlappingAppointment(startTime, endTime);
+    // Check if requested duration conflicts
+    let conflict = getOverlappingAppointment(startTime, endTime);
     if (conflict) {
-      alert(`عذراً، هذا الوقت يتعارض مع موعد محجوز مسبقاً [${conflict.customerName}]!`);
-      return;
+      // Intelligently fit: try 45, 30, or 15 mins if available
+      if (duration > 45 && !getOverlappingAppointment(startTime, addMinutesToTime(startTime, 45))) {
+        duration = 45;
+      } else if (duration > 30 && !getOverlappingAppointment(startTime, addMinutesToTime(startTime, 30))) {
+        duration = 30;
+      } else if (duration > 15 && !getOverlappingAppointment(startTime, addMinutesToTime(startTime, 15))) {
+        duration = 15;
+      } else {
+        alert(`عذراً، هذا الوقت يتعارض مع موعد محجوز مسبقاً [${conflict.customerName}]! يرجى اختيار ربع ساعة آخر متاح.`);
+        return;
+      }
     }
 
     openQuickBook(selectedDate, startTime, duration);
@@ -168,21 +202,30 @@ export const DayDetailsModal: React.FC = () => {
             <span>دوام: {settings.workStartTime} إلى {settings.workEndTime}</span>
           </div>
 
-          {hoursList.map(({ hour, slotStart, slotEnd, overlapApt }) => {
-            const isBooked = Boolean(overlapApt);
+          {hoursList.map(({
+            hour,
+            slotStart,
+            quarters,
+            bookedQuarters,
+            freeQuarters,
+            isFullyBooked,
+            isPartiallyBooked,
+            isCompletelyFree,
+            firstFreeSlot,
+            remainingMinutes,
+          }) => {
             const isExpanded = Boolean(expandedHours[hour]);
+            const primaryBookedApt = bookedQuarters[0]?.bookedApt;
 
             return (
               <div key={hour} className="space-y-1">
-                {/* Main Hour Card */}
-                {isBooked ? (
-                  // Booked Slot Card - Keeps the hour slot itself CLEAR AND PROMINENT
+                {/* 1. Fully Booked Hour Card */}
+                {isFullyBooked ? (
                   <div
-                    onClick={() => overlapApt && openBookedDetail(overlapApt)}
+                    onClick={() => primaryBookedApt && openBookedDetail(primaryBookedApt)}
                     className="w-full p-3 rounded-2xl bg-neutral-900 text-white flex items-center justify-between cursor-pointer hover:bg-neutral-800 transition-colors shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      {/* Fixed Hour Display - Clear & Identical to available slots */}
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="p-1.5 rounded-lg bg-neutral-800 text-neutral-300">
                           <Lock className="w-4 h-4" />
@@ -192,30 +235,74 @@ export const DayDetailsModal: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Customer and Technician Info */}
                       <div className="border-r border-neutral-700 pr-3 mr-1">
                         <div className="flex items-center gap-2">
                           <div className="text-sm font-black text-white truncate">
-                            {overlapApt!.customerName}
+                            {primaryBookedApt?.customerName || 'محجوز'}
                           </div>
                           <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700 shrink-0">
-                            محجوز
+                            محجوز بالكامل
                           </span>
                         </div>
                         <div className="text-[10px] text-neutral-400">
-                          حجز بواسطة: <span className="text-neutral-200 font-bold">{overlapApt!.bookedByTechnician || overlapApt!.technicianName || 'فني'}</span>
+                          حجز بواسطة: <span className="text-neutral-200 font-bold">{primaryBookedApt?.bookedByTechnician || primaryBookedApt?.technicianName || 'فني'}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="text-left shrink-0">
                       <span className="text-[11px] font-bold text-neutral-400 hover:text-white underline">
-                        عرض / تعديل
+                        عرض التفاصيل
                       </span>
                     </div>
                   </div>
+                ) : isPartiallyBooked ? (
+                  /* 2. Partially Booked Hour: STILL AVAILABLE FOR BOOKING! */
+                  <div className="relative flex items-center rounded-2xl border-2 border-emerald-500 bg-emerald-50/20 hover:bg-emerald-50/40 transition-all overflow-hidden shadow-2xs">
+                    {/* Main Clickable Area to Book remaining time */}
+                    <button
+                      type="button"
+                      onClick={() => handleSlotClick(firstFreeSlot)}
+                      className="flex-1 p-3 text-right flex items-center justify-between transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs sm:text-sm font-black text-black">
+                              {formatTimeArabic(slotStart)}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              متاح للحجز (متبقي {remainingMinutes} دقيقة)
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-bold text-neutral-500">
+                            محجوز جزئياً لـ: <strong className="text-neutral-800">{primaryBookedApt?.customerName}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-xs font-black text-white px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-2xs">
+                        حجز المتبقي
+                      </span>
+                    </button>
+
+                    {/* Quarter-Hour Dropdown Arrow */}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleHourDropdown(hour, e)}
+                      title="عرض أرباع الساعة"
+                      className="p-3.5 border-r border-emerald-200 hover:bg-emerald-100 text-emerald-800 transition-colors flex items-center justify-center shrink-0"
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 ) : (
-                  // Available Hour Card
+                  /* 3. Completely Free Hour Card */
                   <div className="relative flex items-center rounded-2xl border border-black/15 bg-white hover:border-black transition-all overflow-hidden">
                     {/* Main Clickable Area to Book Hour directly */}
                     <button
@@ -226,26 +313,26 @@ export const DayDetailsModal: React.FC = () => {
                       <div className="flex items-center gap-2.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
                         <div>
-                          <div className="font-mono text-xs font-black text-black">
+                          <div className="font-mono text-xs sm:text-sm font-black text-black">
                             {formatTimeArabic(slotStart)}
                           </div>
                           <span className="text-[11px] font-bold text-neutral-400">
-                            متاح للحجز ({activePreset.label})
+                            متاح للحجز بالكامل ({activePreset.label})
                           </span>
                         </div>
                       </div>
 
-                      <span className="text-xs font-black text-black px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-black hover:text-white transition-colors">
+                      <span className="text-xs font-black text-black px-3 py-1 rounded-xl bg-neutral-100 hover:bg-black hover:text-white transition-colors">
                         حجز الآن
                       </span>
                     </button>
 
-                    {/* Quarter-Hour Dropdown Arrow Button */}
+                    {/* Quarter-Hour Dropdown Arrow */}
                     <button
                       type="button"
                       onClick={(e) => toggleHourDropdown(hour, e)}
                       title="تخصيص ربع الساعة (:00, :15, :30, :45)"
-                      className="p-3 border-r border-black/10 hover:bg-neutral-100 text-neutral-600 hover:text-black transition-colors flex items-center justify-center shrink-0"
+                      className="p-3.5 border-r border-black/10 hover:bg-neutral-100 text-neutral-600 hover:text-black transition-colors flex items-center justify-center shrink-0"
                     >
                       {isExpanded ? (
                         <ChevronUp className="w-4 h-4" />
@@ -256,27 +343,32 @@ export const DayDetailsModal: React.FC = () => {
                   </div>
                 )}
 
-                {/* Quarter-Hour Sub-slots Dropdown */}
-                {isExpanded && !isBooked && (
-                  <div className="grid grid-cols-4 gap-1.5 p-2 bg-neutral-100/70 rounded-xl border border-black/10 animate-in slide-in-from-top-1 duration-150">
-                    {['00', '15', '30', '45'].map((min) => {
-                      const qTime = `${String(hour).padStart(2, '0')}:${min}`;
-                      const qEndTime = addMinutesToTime(qTime, activePreset.durationMinutes);
-                      const qConflict = getOverlappingAppointment(qTime, qEndTime);
+                {/* Quarter-Hour Sub-slots Dropdown (Visible for Free or Partially Booked hours) */}
+                {isExpanded && !isFullyBooked && (
+                  <div className="grid grid-cols-4 gap-1.5 p-2 bg-neutral-100/90 rounded-xl border border-black/10 animate-in slide-in-from-top-1 duration-150">
+                    {quarters.map(({ minute, time, isBooked: qIsBooked, bookedApt }) => {
+                      if (qIsBooked) {
+                        return (
+                          <button
+                            key={minute}
+                            type="button"
+                            onClick={() => bookedApt && openBookedDetail(bookedApt)}
+                            title={`محجوز: ${bookedApt?.customerName} (حجز بواسطة: ${bookedApt?.bookedByTechnician || bookedApt?.technicianName || 'فني'})`}
+                            className="py-2 px-1 rounded-lg text-[11px] font-mono font-bold bg-neutral-900 text-neutral-300 hover:bg-neutral-800 text-center truncate transition-colors shadow-2xs"
+                          >
+                            <span className="line-through">{time}</span> (محجوز)
+                          </button>
+                        );
+                      }
 
                       return (
                         <button
-                          key={min}
+                          key={minute}
                           type="button"
-                          disabled={Boolean(qConflict)}
-                          onClick={() => handleSlotClick(qTime)}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition-all text-center ${
-                            qConflict
-                              ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed line-through'
-                              : 'bg-white hover:bg-black hover:text-white text-black border border-black/10 shadow-xs'
-                          }`}
+                          onClick={() => handleSlotClick(time)}
+                          className="py-2 px-1 rounded-lg text-[11px] font-mono font-black bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-950 border border-emerald-300 shadow-2xs text-center transition-all"
                         >
-                          {qTime}
+                          {time} ✓ متاح
                         </button>
                       );
                     })}
