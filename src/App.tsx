@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { CalendarView } from './components/CalendarView';
@@ -20,7 +20,7 @@ export const App: React.FC = () => {
   } = useApp();
 
   return (
-    <div className="min-h-screen bg-neutral-100 text-neutral-900 flex flex-col selection:bg-black selection:text-white font-sans">
+    <div className="min-h-screen bg-[#f5f5f7] text-neutral-900 flex flex-col selection:bg-black selection:text-white font-sans">
       {/* Header */}
       <Header />
 

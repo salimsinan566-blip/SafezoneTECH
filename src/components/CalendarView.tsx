@@ -1,11 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   ChevronRight,
   ChevronLeft,
   Calendar as CalendarIcon,
-  Plus,
-  Clock,
-  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -89,31 +86,39 @@ export const CalendarView: React.FC = () => {
   const todayKey = formatDateKey(new Date());
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
-      {/* Calendar Card */}
-      <div className="bg-white rounded-3xl border border-black/10 shadow-xs overflow-hidden">
+    <div className="max-w-3xl mx-auto space-y-4">
+      {/* Apple-style Calendar Card */}
+      <div className="bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
         
-        {/* Top Header: Month Nav */}
-        <div className="p-4 sm:p-5 border-b border-black/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg sm:text-xl font-black text-black">
-              <span>{ARABIC_MONTHS[currentMonth].split('/')[0].trim()}</span>
-              <span className="mr-2 text-neutral-500 font-bold">{currentYear}</span>
-            </h2>
+        {/* Apple Top Header: Large Month Title + Segmented Controls */}
+        <div className="px-5 py-4 sm:px-7 sm:py-5 border-b border-neutral-100 flex items-center justify-between">
+          <div>
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-neutral-900 font-sans">
+                {ARABIC_MONTHS[currentMonth].split('/')[0].trim()}
+              </h2>
+              <span className="text-base sm:text-lg font-bold text-neutral-400">
+                {currentYear}
+              </span>
+            </div>
+            <p className="text-[11px] font-semibold text-neutral-400 mt-0.5">
+              انقر على أي يوم لفتح جدول المواعيد والحجز السريع
+            </p>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* Apple-style Segmented Navigation */}
+          <div className="flex items-center gap-1 bg-neutral-100/90 p-1 rounded-2xl border border-neutral-200/50 shadow-2xs">
             <button
               onClick={handlePrevMonth}
               title="الشهر السابق"
-              className="p-2 rounded-xl border border-black/10 hover:bg-neutral-100 text-black active:scale-95 transition-all"
+              className="p-1.5 sm:p-2 rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
             </button>
 
             <button
               onClick={handleGoToday}
-              className="px-3 py-1.5 rounded-xl border border-black/10 hover:bg-black hover:text-white text-xs font-black text-black active:scale-95 transition-all"
+              className="px-3 py-1 rounded-xl text-xs font-bold text-neutral-800 hover:text-black hover:bg-white active:scale-95 transition-all"
             >
               اليوم
             </button>
@@ -121,20 +126,20 @@ export const CalendarView: React.FC = () => {
             <button
               onClick={handleNextMonth}
               title="الشهر التالي"
-              className="p-2 rounded-xl border border-black/10 hover:bg-neutral-100 text-black active:scale-95 transition-all"
+              className="p-1.5 sm:p-2 rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
         </div>
 
-        {/* Days of Week Header */}
-        <div className="grid grid-cols-7 border-b border-black/10 bg-neutral-50 text-center">
+        {/* Days of Week Header (Apple minimal subtle gray typography) */}
+        <div className="grid grid-cols-7 border-b border-neutral-100 text-center py-2.5 px-2.5 sm:px-4">
           {['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map((day, idx) => (
             <div
               key={day}
-              className={`py-2 text-[11px] sm:text-xs font-black ${
-                idx === 5 ? 'text-rose-600' : 'text-neutral-600'
+              className={`text-[11px] sm:text-xs font-bold tracking-wider ${
+                idx === 5 ? 'text-red-500' : 'text-neutral-400'
               }`}
             >
               <span className="hidden sm:inline">{ARABIC_DAYS[idx]}</span>
@@ -143,8 +148,8 @@ export const CalendarView: React.FC = () => {
           ))}
         </div>
 
-        {/* Calendar Days Grid */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 p-2.5 sm:p-4">
+        {/* Calendar Days Grid (Apple-style rounded squircle cells) */}
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 p-3 sm:p-5">
           {calendarCells.map((cell) => {
             const isToday = cell.dateKey === todayKey;
             const isFull = isDayFullyBooked(cell.dateKey);
@@ -156,46 +161,47 @@ export const CalendarView: React.FC = () => {
                 key={cell.dateKey}
                 type="button"
                 onClick={() => openDayDetails(cell.dateKey)}
-                className={`relative w-full aspect-square rounded-2xl flex flex-col items-center justify-center p-1 transition-all active:scale-95 ${
+                className={`group relative w-full aspect-square rounded-[18px] sm:rounded-2xl flex flex-col items-center justify-center p-1 transition-all duration-150 active:scale-95 ${
                   !cell.isCurrentMonth
-                    ? 'opacity-25 bg-neutral-50 border border-neutral-100 text-neutral-400'
+                    ? 'opacity-20 cursor-default bg-transparent text-neutral-300'
                     : isFull
-                    ? 'bg-white border-2 border-rose-500 shadow-xs hover:bg-rose-50/40 text-black'
-                    : 'bg-white border-2 border-emerald-500 shadow-xs hover:bg-emerald-50/40 text-black'
+                    ? 'bg-white border-2 border-red-500 shadow-2xs hover:shadow-xs hover:border-red-600 text-neutral-900'
+                    : 'bg-white border-2 border-emerald-500 shadow-2xs hover:shadow-xs hover:border-emerald-600 text-neutral-900'
                 }`}
               >
-                {/* Today Marker */}
-                {isToday && (
-                  <span className="absolute top-1 right-1 text-[7px] sm:text-[8px] font-black px-1 rounded-full bg-black text-white leading-tight">
-                    اليوم
+                {/* Apple-style Day Number: If today, iconic red circular badge */}
+                {isToday ? (
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-500 text-white font-black text-xs sm:text-sm flex items-center justify-center shadow-xs">
+                    {cell.dayNumber}
+                  </div>
+                ) : (
+                  <span
+                    className={`text-sm sm:text-base font-bold tracking-tight transition-transform group-hover:scale-105 ${
+                      cell.isCurrentMonth ? 'text-neutral-900' : 'text-neutral-300'
+                    }`}
+                  >
+                    {cell.dayNumber}
                   </span>
                 )}
 
-                {/* Day Number Only */}
-                <span
-                  className={`text-sm sm:text-lg font-black tracking-tight ${
-                    isToday ? 'underline underline-offset-2' : ''
-                  }`}
-                >
-                  {cell.dayNumber}
-                </span>
-
-                {/* Simple Black Dots for Appointments */}
+                {/* Apple-style Minimalist Appointment Dots */}
                 {cell.isCurrentMonth && (
-                  <div className="flex items-center gap-0.5 sm:gap-1 mt-1 min-h-[6px]">
+                  <div className="flex items-center gap-1 mt-1 min-h-[5px]">
                     {aptCount > 0 ? (
-                      aptCount <= 4 ? (
+                      aptCount <= 3 ? (
                         Array.from({ length: aptCount }).map((_, i) => (
                           <span
                             key={i}
-                            className="w-1.5 h-1.5 rounded-full bg-black"
+                            className={`w-1.5 h-1.5 rounded-full transition-transform ${
+                              isToday ? 'bg-red-500' : 'bg-neutral-800'
+                            }`}
                           ></span>
                         ))
                       ) : (
                         <div className="flex items-center gap-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
-                          <span className="text-[9px] font-black font-mono leading-none text-black">
-                            +{aptCount}
+                          <span className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-red-500' : 'bg-neutral-800'}`}></span>
+                          <span className="text-[9px] font-black font-mono leading-none text-neutral-700">
+                            {aptCount}
                           </span>
                         </div>
                       )
@@ -207,19 +213,25 @@ export const CalendarView: React.FC = () => {
           })}
         </div>
 
-        {/* Minimalist Legend Footer */}
-        <div className="p-3 bg-neutral-50 border-t border-black/10 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[11px] font-bold text-neutral-600">
+        {/* Apple-style Minimalist Legend Pill Bar */}
+        <div className="py-3 px-4 bg-neutral-50/70 border-t border-neutral-100 flex flex-wrap items-center justify-center gap-4 sm:gap-7 text-[11px] font-semibold text-neutral-500">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md border-2 border-emerald-500 bg-white"></span>
-            <span>إطار أخضر: يوجد وقت متاح</span>
+            <span className="w-2.5 h-2.5 rounded-md border-2 border-emerald-500 bg-white"></span>
+            <span>إطار أخضر: وقت متاح</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md border-2 border-rose-500 bg-white"></span>
-            <span>إطار أحمر: اليوم مقبط بالكامل</span>
+            <span className="w-2.5 h-2.5 rounded-md border-2 border-red-500 bg-white"></span>
+            <span>إطار أحمر: اليوم مقبط</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-black"></span>
-            <span>نقاط سوداء: المواعيد المحجوزة</span>
+            <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+              {new Date().getDate()}
+            </span>
+            <span>الدائرة الحمراء: اليوم الحالي</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-neutral-800"></span>
+            <span>نقطة: موعد محجوز</span>
           </div>
         </div>
 
