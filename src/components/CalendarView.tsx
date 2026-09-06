@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   ChevronRight,
   ChevronLeft,
@@ -151,6 +151,7 @@ export const CalendarView: React.FC = () => {
         <div className="grid grid-cols-7 gap-y-3 gap-x-1 sm:gap-x-2 p-3.5 sm:p-6">
           {calendarCells.map((cell) => {
             const isToday = cell.dateKey === todayKey;
+            const isPast = cell.dateKey < todayKey;
             const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === cell.dateKey) : [];
             const aptCount = dayApts.length;
             const isFull = isDayFullyBooked(cell.dateKey);
@@ -175,12 +176,17 @@ export const CalendarView: React.FC = () => {
                 key={cell.dateKey}
                 type="button"
                 onClick={() => openDayDetails(cell.dateKey)}
+                title={isPast ? `${cell.dayNumber} (يوم سابق - ${aptCount} موعد)` : undefined}
                 className="group relative flex flex-col items-center justify-center focus:outline-none active:scale-95 transition-transform"
               >
-                {/* The Perfect Apple-Style Circle (Green if empty, Orange if has work, Red if fully booked) */}
+                {/* The Perfect Apple-Style Circle (Past is muted, Green if empty future/today, Orange if has work, Red if fully booked) */}
                 <div
                   className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex flex-col items-center justify-center transition-all duration-150 ${
-                    isFull
+                    isPast
+                      ? hasWork || isFull
+                        ? 'border border-neutral-300 bg-neutral-100 text-neutral-600 font-bold opacity-75 group-hover:opacity-100'
+                        : 'border border-neutral-200/80 bg-neutral-50/70 text-neutral-400 font-medium opacity-40 group-hover:opacity-70'
+                      : isFull
                       ? 'border-2 border-red-500 bg-red-50/50 text-red-950 font-black shadow-2xs group-hover:scale-105'
                       : hasWork
                       ? 'border-2 border-orange-500 bg-orange-50/50 text-orange-950 font-black shadow-2xs group-hover:scale-105'
@@ -198,6 +204,10 @@ export const CalendarView: React.FC = () => {
                     <span className="text-[9px] font-black text-red-600 leading-none">
                       اليوم
                     </span>
+                  ) : isPast ? (
+                    aptCount > 0 ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 opacity-60"></span>
+                    ) : null
                   ) : isFull ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                   ) : hasWork ? (

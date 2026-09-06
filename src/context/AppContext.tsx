@@ -281,6 +281,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!selectedSlotToBook) return false;
     const { date, startTime, endTime, durationMinutes } = selectedSlotToBook;
 
+    // Defense against booking in the past
+    const now = new Date();
+    const todayKey = formatDateKey(now);
+    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    if (date < todayKey || (date === todayKey && startTime < currentTimeStr)) {
+      showNotification('لا يمكن حجز موعد في تاريخ أو وقت قد مضى!', 'error');
+      return false;
+    }
+
     // Check conflict
     const conflict = isSlotOverlapping(date, startTime, endTime);
     if (conflict) {
@@ -314,6 +323,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAppointment = (
     apt: Omit<Appointment, 'id' | 'createdAt'>
   ): { success: boolean; conflictWith?: Appointment } => {
+    const now = new Date();
+    const todayKey = formatDateKey(now);
+    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    if (apt.date < todayKey || (apt.date === todayKey && apt.startTime < currentTimeStr)) {
+      showNotification('لا يمكن إضافة موعد في تاريخ أو وقت قد مضى!', 'error');
+      return { success: false };
+    }
+
     const conflict = appointments.find(
       (existing) =>
         existing.date === apt.date &&
