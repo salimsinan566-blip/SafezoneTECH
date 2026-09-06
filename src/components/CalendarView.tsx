@@ -57,6 +57,8 @@ export const CalendarView: React.FC = () => {
 
   // Mobile Ultra mode: 'vertical' (full-width cards scrolling down) or 'grid' (horizontal 7-day grid)
   const [mobileUltraMode, setMobileUltraMode] = useState<'vertical' | 'grid'>('vertical');
+  // In Ultra mode, start from the current day (today) by default
+  const [showPastDaysInUltra, setShowPastDaysInUltra] = useState<boolean>(false);
 
   const handleZoomIn = () => {
     setZoomLevel((curr) => {
@@ -215,6 +217,13 @@ export const CalendarView: React.FC = () => {
 
   const todayKey = formatDateKey(new Date());
   const currentMonthDays = calendarCells.filter((c) => c.isCurrentMonth);
+  const isViewingCurrentMonth = currentMonthDays.some((c) => c.dateKey === todayKey);
+  const pastDaysCount = currentMonthDays.filter((c) => c.dateKey < todayKey).length;
+
+  // In Ultra mode, start from the current day (today) by default
+  const ultraDays = (isViewingCurrentMonth && !showPastDaysInUltra)
+    ? currentMonthDays.filter((c) => c.dateKey >= todayKey)
+    : currentMonthDays;
 
   const handleJumpToDay = (dateKey: string) => {
     setSelectedDate(dateKey);
@@ -456,9 +465,9 @@ export const CalendarView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Apple-style Horizontal Days Strip */}
+              {/* Apple-style Horizontal Days Strip (Starts from today in Ultra mode) */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
-                {currentMonthDays.map((c) => {
+                {ultraDays.map((c) => {
                   const isToday = c.dateKey === todayKey;
                   const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === c.dateKey) : [];
                   const isFull = isDayFullyBooked(c.dateKey);
@@ -475,7 +484,7 @@ export const CalendarView: React.FC = () => {
                         isSelected
                           ? 'bg-neutral-900 text-white border-black shadow-xs ring-2 ring-black/20'
                           : isToday
-                          ? 'bg-red-50 border-red-300 text-red-700 font-black'
+                          ? 'bg-red-50 border-red-300 text-red-700 font-black ring-1 ring-red-400'
                           : 'bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-100'
                       }`}
                     >
@@ -502,9 +511,32 @@ export const CalendarView: React.FC = () => {
               </div>
             </div>
 
-            {/* Continuous Vertical Feed of Days ("انزل لي جوا") */}
+            {/* Continuous Vertical Feed of Days ("انزل لي جوا") - Starts from Today */}
             <div className="space-y-3 pt-1">
-              {currentMonthDays.map((c) => {
+              {/* Information & Toggle banner for past days */}
+              {isViewingCurrentMonth && pastDaysCount > 0 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-neutral-100/90 rounded-xl border border-neutral-200/80 text-xs">
+                  <span className="font-bold text-neutral-600 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                    <span>
+                      {showPastDaysInUltra
+                        ? 'يتم عرض جميع أيام الشهر (بما فيها السابقة)'
+                        : `يبدأ العرض من اليوم الحالي (${todayKey})`}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPastDaysInUltra(!showPastDaysInUltra)}
+                    className="font-black text-black underline hover:text-neutral-700 active:scale-95 transition-all text-[11px]"
+                  >
+                    {showPastDaysInUltra
+                      ? 'إخفاء الأيام السابقة'
+                      : `عرض الأيام السابقة (${pastDaysCount})`}
+                  </button>
+                </div>
+              )}
+
+              {ultraDays.map((c) => {
                 const isToday = c.dateKey === todayKey;
                 const isPast = c.dateKey < todayKey;
                 const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === c.dateKey) : [];
