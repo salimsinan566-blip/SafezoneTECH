@@ -2,7 +2,6 @@
 import {
   ChevronRight,
   ChevronLeft,
-  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -148,90 +147,83 @@ export const CalendarView: React.FC = () => {
           ))}
         </div>
 
-        {/* Calendar Days Grid (Apple-style rounded squircle cells) */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 p-3 sm:p-5">
+        {/* Calendar Days Grid: PURE CIRCLES ONLY, NO SQUARE BOXES */}
+        <div className="grid grid-cols-7 gap-y-3 gap-x-1 sm:gap-x-2 p-3.5 sm:p-6">
           {calendarCells.map((cell) => {
             const isToday = cell.dateKey === todayKey;
-            const isFull = isDayFullyBooked(cell.dateKey);
             const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === cell.dateKey) : [];
             const aptCount = dayApts.length;
+            const isFull = isDayFullyBooked(cell.dateKey);
+            const hasWork = aptCount > 0 && !isFull;
+            const isEmpty = aptCount === 0;
+
+            if (!cell.isCurrentMonth) {
+              return (
+                <div
+                  key={cell.dateKey}
+                  className="flex flex-col items-center justify-center p-1 opacity-20 cursor-default"
+                >
+                  <span className="text-xs sm:text-sm font-medium text-neutral-400">
+                    {cell.dayNumber}
+                  </span>
+                </div>
+              );
+            }
 
             return (
               <button
                 key={cell.dateKey}
                 type="button"
                 onClick={() => openDayDetails(cell.dateKey)}
-                className={`group relative w-full aspect-square rounded-[18px] sm:rounded-2xl flex flex-col items-center justify-center p-1 transition-all duration-150 active:scale-95 ${
-                  !cell.isCurrentMonth
-                    ? 'opacity-20 cursor-default bg-transparent text-neutral-300'
-                    : isFull
-                    ? 'bg-white border-2 border-red-500 shadow-2xs hover:shadow-xs hover:border-red-600 text-neutral-900'
-                    : 'bg-white border-2 border-emerald-500 shadow-2xs hover:shadow-xs hover:border-emerald-600 text-neutral-900'
-                }`}
+                className="group relative flex flex-col items-center justify-center focus:outline-none active:scale-95 transition-transform"
               >
-                {/* Apple-style Day Number: If today, iconic red circular badge */}
-                {isToday ? (
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-500 text-white font-black text-xs sm:text-sm flex items-center justify-center shadow-xs">
-                    {cell.dayNumber}
-                  </div>
-                ) : (
-                  <span
-                    className={`text-sm sm:text-base font-bold tracking-tight transition-transform group-hover:scale-105 ${
-                      cell.isCurrentMonth ? 'text-neutral-900' : 'text-neutral-300'
-                    }`}
-                  >
+                {/* The Perfect Apple-Style Circle (Green if empty, Orange if has work, Red if fully booked) */}
+                <div
+                  className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex flex-col items-center justify-center transition-all duration-150 ${
+                    isFull
+                      ? 'border-2 border-red-500 bg-red-50/50 text-red-950 font-black shadow-2xs group-hover:scale-105'
+                      : hasWork
+                      ? 'border-2 border-orange-500 bg-orange-50/50 text-orange-950 font-black shadow-2xs group-hover:scale-105'
+                      : 'border-2 border-emerald-500 bg-emerald-50/40 text-emerald-950 font-black shadow-2xs group-hover:scale-105'
+                  }`}
+                >
+                  <span className="text-xs sm:text-sm font-black tracking-tight leading-none">
                     {cell.dayNumber}
                   </span>
-                )}
+                </div>
 
-                {/* Apple-style Minimalist Appointment Dots */}
-                {cell.isCurrentMonth && (
-                  <div className="flex items-center gap-1 mt-1 min-h-[5px]">
-                    {aptCount > 0 ? (
-                      aptCount <= 3 ? (
-                        Array.from({ length: aptCount }).map((_, i) => (
-                          <span
-                            key={i}
-                            className={`w-1.5 h-1.5 rounded-full transition-transform ${
-                              isToday ? 'bg-red-500' : 'bg-neutral-800'
-                            }`}
-                          ></span>
-                        ))
-                      ) : (
-                        <div className="flex items-center gap-0.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-red-500' : 'bg-neutral-800'}`}></span>
-                          <span className="text-[9px] font-black font-mono leading-none text-neutral-700">
-                            {aptCount}
-                          </span>
-                        </div>
-                      )
-                    ) : null}
-                  </div>
-                )}
+                {/* Sub-indicator (Today label or small status dot) */}
+                <div className="flex items-center gap-1 mt-1 min-h-[6px]">
+                  {isToday ? (
+                    <span className="text-[9px] font-black text-red-600 leading-none">
+                      اليوم
+                    </span>
+                  ) : isFull ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  ) : hasWork ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  )}
+                </div>
               </button>
             );
           })}
         </div>
 
-        {/* Apple-style Minimalist Legend Pill Bar */}
-        <div className="py-3 px-4 bg-neutral-50/70 border-t border-neutral-100 flex flex-wrap items-center justify-center gap-4 sm:gap-7 text-[11px] font-semibold text-neutral-500">
+        {/* Minimalist Legend Pill Bar */}
+        <div className="py-3 px-4 bg-neutral-50/80 border-t border-neutral-100 flex flex-wrap items-center justify-center gap-4 sm:gap-7 text-[11px] font-bold text-neutral-600">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-md border-2 border-emerald-500 bg-white"></span>
-            <span>إطار أخضر: وقت متاح</span>
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-emerald-50/50"></span>
+            <span>دائرة خضراء: يوم فارغ متاح</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-md border-2 border-red-500 bg-white"></span>
-            <span>إطار أحمر: اليوم مقبط</span>
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-orange-500 bg-orange-50/50"></span>
+            <span>دائرة برتقالية: فيه شغل ومواعيد</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
-              {new Date().getDate()}
-            </span>
-            <span>الدائرة الحمراء: اليوم الحالي</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-neutral-800"></span>
-            <span>نقطة: موعد محجوز</span>
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-red-500 bg-red-50/50"></span>
+            <span>دائرة حمراء: مقبط بالكامل</span>
           </div>
         </div>
 
