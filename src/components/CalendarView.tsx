@@ -135,7 +135,7 @@ export const CalendarView: React.FC = () => {
   const todayKey = formatDateKey(new Date());
 
   return (
-    <div className={`mx-auto space-y-4 transition-all duration-300 ${
+    <div className={`mx-auto space-y-3 sm:space-y-4 transition-all duration-300 w-full ${
       zoomLevel === 'compact'
         ? 'max-w-3xl'
         : zoomLevel === 'medium'
@@ -143,133 +143,128 @@ export const CalendarView: React.FC = () => {
         : 'max-w-6xl'
     }`}>
       {/* Apple-style Calendar Card */}
-      <div className="bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+      <div className="bg-white rounded-2xl sm:rounded-[28px] border border-neutral-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden transition-all w-full">
         
-        {/* Apple Top Header: Month Title + Zoom Controls + Navigation */}
-        <div className="px-4 py-3.5 sm:px-7 sm:py-5 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-neutral-900 font-sans">
+        {/* Apple Top Header: Structured into 2 responsive rows for mobile perfection */}
+        <div className="p-3 sm:px-7 sm:py-5 border-b border-neutral-100 space-y-2.5 sm:space-y-3 bg-white">
+          {/* Row 1: Month/Year Title + Navigation Arrows */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+              <h2 className="text-lg sm:text-3xl font-black tracking-tight text-neutral-900 font-sans truncate">
                 {ARABIC_MONTHS[currentMonth].split('/')[0].trim()}
               </h2>
-              <span className="text-base sm:text-lg font-bold text-neutral-400">
+              <span className="text-xs sm:text-lg font-bold text-neutral-400 font-mono shrink-0">
                 {currentYear}
               </span>
             </div>
-            <p className="text-[11px] font-semibold text-neutral-400 mt-0.5">
-              {zoomLevel === 'compact'
-                ? 'عرض مدمج (دوائر أبل الصافية) — استخدم التكبير لعرض المواعيد'
-                : zoomLevel === 'medium'
-                ? 'عرض المواعيد — تظهر المواعيد كشرائح أنيقة في الأيام'
-                : 'عرض مكبر ومفصل — بطاقات كاملة بأسماء العملاء والفنيين'}
-            </p>
-          </div>
-
-          <div className="flex items-center flex-wrap gap-2">
-            {/* Apple Zoom Controls (Zoom Out, Segmented Levels, Zoom In) */}
-            <div className="flex items-center gap-1 bg-neutral-100/90 p-1 rounded-2xl border border-neutral-200/50 shadow-2xs">
-              <button
-                type="button"
-                onClick={handleZoomOut}
-                disabled={zoomLevel === 'compact'}
-                title="تصغير الكالندر (Ctrl + Scroll Down)"
-                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
-                  zoomLevel === 'compact'
-                    ? 'text-neutral-300 cursor-not-allowed'
-                    : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
-                }`}
-              >
-                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-              </button>
-
-              <div className="flex items-center gap-0.5 px-0.5">
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('compact')}
-                  title="القياس المدمج (دوائر فقط)"
-                  className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
-                    zoomLevel === 'compact'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  مدمج
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('medium')}
-                  title="قياس المواعيد (شرائح المواعيد)"
-                  className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
-                    zoomLevel === 'medium'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  مواعيد
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('detailed')}
-                  title="القياس المكبر (تفاصيل كاملة)"
-                  className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
-                    zoomLevel === 'detailed'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  مكبّر
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleZoomIn}
-                disabled={zoomLevel === 'detailed'}
-                title="تكبير الكالندر (Ctrl + Scroll Up)"
-                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
-                  zoomLevel === 'detailed'
-                    ? 'text-neutral-300 cursor-not-allowed'
-                    : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
-                }`}
-              >
-                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-              </button>
-            </div>
 
             {/* Apple-style Segmented Month Navigation */}
-            <div className="flex items-center gap-1 bg-neutral-100/90 p-1 rounded-2xl border border-neutral-200/50 shadow-2xs">
+            <div className="flex items-center gap-0.5 sm:gap-1 bg-neutral-100/90 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs shrink-0">
               <button
+                type="button"
                 onClick={handlePrevMonth}
                 title="الشهر السابق"
-                className="p-1.5 sm:p-2 rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
+                className="p-1 sm:p-2 rounded-lg sm:rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
               >
-                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </button>
 
               <button
+                type="button"
                 onClick={handleGoToday}
-                className="px-3 py-1 rounded-xl text-xs font-bold text-neutral-800 hover:text-black hover:bg-white active:scale-95 transition-all"
+                className="px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold text-neutral-800 hover:text-black hover:bg-white active:scale-95 transition-all"
               >
                 اليوم
               </button>
 
               <button
+                type="button"
                 onClick={handleNextMonth}
                 title="الشهر التالي"
-                className="p-1.5 sm:p-2 rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
+                className="p-1 sm:p-2 rounded-lg sm:rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
               >
-                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </button>
             </div>
+          </div>
+
+          {/* Row 2: Apple Zoom Segmented Controls (Full width touch bar on mobile) */}
+          <div className="flex items-center justify-between gap-1 bg-neutral-100/90 p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs w-full sm:w-fit sm:mx-auto">
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              disabled={zoomLevel === 'compact'}
+              title="تصغير الكالندر (Ctrl + Scroll Down)"
+              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                zoomLevel === 'compact'
+                  ? 'text-neutral-300 cursor-not-allowed'
+                  : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
+              }`}
+            >
+              <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+            </button>
+
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-1 sm:flex-initial px-0.5">
+              <button
+                type="button"
+                onClick={() => handleSetZoom('compact')}
+                title="القياس المدمج (دوائر فقط)"
+                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                  zoomLevel === 'compact'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                }`}
+              >
+                مدمج
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetZoom('medium')}
+                title="قياس المواعيد (شرائح المواعيد)"
+                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                  zoomLevel === 'medium'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                }`}
+              >
+                مواعيد
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetZoom('detailed')}
+                title="القياس المكبر (تفاصيل كاملة)"
+                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                  zoomLevel === 'detailed'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                }`}
+              >
+                مكبّر
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              disabled={zoomLevel === 'detailed'}
+              title="تكبير الكالندر (Ctrl + Scroll Up)"
+              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                zoomLevel === 'detailed'
+                  ? 'text-neutral-300 cursor-not-allowed'
+                  : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
+              }`}
+            >
+              <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+            </button>
           </div>
         </div>
 
         {/* Days of Week Header */}
-        <div className="grid grid-cols-7 border-b border-neutral-100 text-center py-2.5 px-2.5 sm:px-4 bg-neutral-50/40">
+        <div className="grid grid-cols-7 border-b border-neutral-100 text-center py-2 px-0.5 sm:px-4 bg-neutral-50/40">
           {['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map((day, idx) => (
             <div
               key={day}
-              className={`text-[11px] sm:text-xs font-bold tracking-wider ${
+              className={`text-[10px] sm:text-xs font-bold tracking-wider truncate min-w-0 ${
                 idx === 5 ? 'text-red-500' : 'text-neutral-400'
               }`}
             >
@@ -280,12 +275,12 @@ export const CalendarView: React.FC = () => {
         </div>
 
         {/* Calendar Days Grid (Adapts smoothly across Compact / Medium / Detailed) */}
-        <div className={`grid grid-cols-7 transition-all duration-200 ${
+        <div className={`grid grid-cols-7 transition-all duration-200 w-full ${
           zoomLevel === 'compact'
-            ? 'gap-y-3 gap-x-1 sm:gap-x-2 p-3.5 sm:p-6'
+            ? 'gap-y-2 sm:gap-y-3 gap-x-0.5 sm:gap-x-2 p-1.5 sm:p-6'
             : zoomLevel === 'medium'
-            ? 'gap-1.5 sm:gap-2 p-2.5 sm:p-5'
-            : 'gap-2 sm:gap-3 p-3 sm:p-6'
+            ? 'gap-1 sm:gap-2 p-1 sm:p-5'
+            : 'gap-1 sm:gap-2.5 p-1 sm:p-5'
         }`}>
           {calendarCells.map((cell) => {
             const isToday = cell.dateKey === todayKey;
@@ -300,11 +295,15 @@ export const CalendarView: React.FC = () => {
               return (
                 <div
                   key={cell.dateKey}
-                  className={`flex flex-col items-center justify-center p-1 opacity-20 cursor-default ${
-                    zoomLevel !== 'compact' ? 'min-h-[70px] sm:min-h-[85px]' : ''
+                  className={`flex flex-col items-center justify-center p-0.5 opacity-20 cursor-default min-w-0 ${
+                    zoomLevel === 'medium'
+                      ? 'min-h-[60px] sm:min-h-[95px]'
+                      : zoomLevel === 'detailed'
+                      ? 'min-h-[85px] sm:min-h-[140px]'
+                      : ''
                   }`}
                 >
-                  <span className="text-xs sm:text-sm font-medium text-neutral-400">
+                  <span className="text-[10px] sm:text-sm font-medium text-neutral-400">
                     {cell.dayNumber}
                   </span>
                 </div>
@@ -319,10 +318,10 @@ export const CalendarView: React.FC = () => {
                   type="button"
                   onClick={() => openDayDetails(cell.dateKey)}
                   title={isPast ? `${cell.dayNumber} (يوم سابق - ${aptCount} موعد)` : undefined}
-                  className="group relative flex flex-col items-center justify-center focus:outline-none active:scale-95 transition-transform"
+                  className="group relative flex flex-col items-center justify-center focus:outline-none active:scale-95 transition-transform min-w-0 py-0.5"
                 >
                   <div
-                    className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex flex-col items-center justify-center transition-all duration-150 ${
+                    className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full flex flex-col items-center justify-center transition-all duration-150 ${
                       isPast
                         ? hasWork || isFull
                           ? 'border border-neutral-300 bg-neutral-100 text-neutral-600 font-bold opacity-75 group-hover:opacity-100'
@@ -340,9 +339,9 @@ export const CalendarView: React.FC = () => {
                   </div>
 
                   {/* Sub-indicator (Today label or small status dot) */}
-                  <div className="flex items-center gap-1 mt-1 min-h-[6px]">
+                  <div className="flex items-center gap-1 mt-0.5 min-h-[5px]">
                     {isToday ? (
-                      <span className="text-[9px] font-black text-red-600 leading-none">
+                      <span className="text-[8px] sm:text-[9px] font-black text-red-600 leading-none">
                         اليوم
                       </span>
                     ) : isPast ? (
@@ -367,7 +366,7 @@ export const CalendarView: React.FC = () => {
                 <div
                   key={cell.dateKey}
                   onClick={() => openDayDetails(cell.dateKey)}
-                  className={`group relative flex flex-col p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer min-h-[85px] sm:min-h-[105px] text-right ${
+                  className={`group relative flex flex-col p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer min-h-[68px] sm:min-h-[105px] text-right min-w-0 overflow-hidden ${
                     isPast
                       ? 'bg-neutral-50/60 border-neutral-200/70 hover:bg-neutral-100/60'
                       : isFull
@@ -378,9 +377,9 @@ export const CalendarView: React.FC = () => {
                   }`}
                 >
                   {/* Top Bar: Circle Day Number + Status/Today */}
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-0.5 sm:mb-1 min-w-0">
                     <div
-                      className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-black text-xs leading-none transition-transform group-hover:scale-105 ${
+                      className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs leading-none shrink-0 ${
                         isPast
                           ? 'border border-neutral-300 text-neutral-500 bg-neutral-100'
                           : isFull
@@ -393,14 +392,14 @@ export const CalendarView: React.FC = () => {
                       {cell.dayNumber}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       {isToday && (
-                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-red-100 text-red-600 leading-none">
+                        <span className="px-1 py-0.2 rounded text-[8px] sm:text-[9px] font-black bg-red-100 text-red-600 leading-none">
                           اليوم
                         </span>
                       )}
                       {aptCount > 0 && !isToday && (
-                        <span className="text-[10px] font-bold text-neutral-400 font-mono">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-neutral-400 font-mono">
                           {aptCount}
                         </span>
                       )}
@@ -408,7 +407,7 @@ export const CalendarView: React.FC = () => {
                   </div>
 
                   {/* Event Chips (Up to 2) */}
-                  <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                  <div className="flex-1 flex flex-col gap-0.5 sm:gap-1 overflow-hidden min-w-0">
                     {dayApts.slice(0, 2).map((apt) => (
                       <div
                         key={apt.id}
@@ -417,28 +416,22 @@ export const CalendarView: React.FC = () => {
                           openBookedDetail(apt);
                         }}
                         title={`${formatTimeArabic(apt.startTime)}: ${apt.customerName} (${apt.bookedByTechnician || apt.technicianName || 'فني'})`}
-                        className={`w-full px-1.5 py-0.5 sm:py-1 rounded-lg text-[10px] font-bold truncate transition-all shadow-2xs flex items-center gap-1 text-right ${
+                        className={`w-full px-1 py-0.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-bold truncate transition-all shadow-2xs flex items-center gap-0.5 sm:gap-1 text-right min-w-0 ${
                           isPast
                             ? 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'
                             : 'bg-neutral-900 text-white hover:bg-neutral-800'
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isPast ? 'bg-neutral-400' : 'bg-emerald-400'}`}></span>
-                        <span className="font-mono text-[9px] text-neutral-300 shrink-0">{apt.startTime}</span>
-                        <span className="truncate">{apt.customerName}</span>
+                        <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full shrink-0 ${isPast ? 'bg-neutral-400' : 'bg-emerald-400'}`}></span>
+                        <span className="font-mono text-[7px] sm:text-[9px] text-neutral-300 shrink-0">{apt.startTime}</span>
+                        <span className="truncate text-[8px] sm:text-[10px]">{apt.customerName}</span>
                       </div>
                     ))}
 
                     {aptCount > 2 && (
-                      <span className="text-[9px] font-black text-neutral-500 text-right pr-0.5">
-                        +{aptCount - 2} مواعيد إضافية
+                      <span className="text-[8px] sm:text-[9px] font-black text-neutral-500 text-right pr-0.5 truncate">
+                        +{aptCount - 2} المزيد
                       </span>
-                    )}
-
-                    {aptCount === 0 && !isPast && (
-                      <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 text-[10px] font-bold text-neutral-400 transition-opacity">
-                        + حجز
-                      </div>
                     )}
                   </div>
                 </div>
@@ -450,7 +443,7 @@ export const CalendarView: React.FC = () => {
               <div
                 key={cell.dateKey}
                 onClick={() => openDayDetails(cell.dateKey)}
-                className={`group relative flex flex-col p-2 sm:p-2.5 rounded-2xl border transition-all cursor-pointer min-h-[125px] sm:min-h-[155px] text-right ${
+                className={`group relative flex flex-col p-1 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer min-h-[95px] sm:min-h-[155px] text-right min-w-0 overflow-hidden ${
                   isPast
                     ? 'bg-neutral-50/70 border-neutral-200/80 hover:bg-neutral-100/70'
                     : isFull
@@ -460,41 +453,41 @@ export const CalendarView: React.FC = () => {
                     : 'bg-white border-neutral-200 hover:border-black/40 shadow-2xs hover:shadow-xs'
                 }`}
               >
-                {/* Header: Day number circle + full status badge */}
-                <div className="flex items-center justify-between mb-2">
+                {/* Header: Day number circle + compact status badge */}
+                <div className="flex items-center justify-between mb-1 sm:mb-2 min-w-0">
                   <div
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-xs sm:text-sm leading-none transition-transform group-hover:scale-105 ${
+                    className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-[10px] sm:text-sm leading-none shrink-0 ${
                       isPast
                         ? 'border border-neutral-300 text-neutral-500 bg-neutral-100'
                         : isFull
-                        ? 'border-2 border-red-500 bg-red-500 text-white shadow-2xs'
+                        ? 'border sm:border-2 border-red-500 bg-red-500 text-white shadow-2xs'
                         : hasWork
-                        ? 'border-2 border-orange-500 bg-orange-50 text-orange-950 font-black shadow-2xs'
-                        : 'border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-black shadow-2xs'
+                        ? 'border sm:border-2 border-orange-500 bg-orange-50 text-orange-950 font-black shadow-2xs'
+                        : 'border sm:border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-black shadow-2xs'
                     }`}
                   >
                     {cell.dayNumber}
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     {isToday ? (
-                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-100 text-red-600">
+                      <span className="px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black bg-red-100 text-red-600">
                         اليوم
                       </span>
                     ) : isPast ? (
-                      <span className="text-[10px] font-bold text-neutral-400">
-                        منتهي
+                      <span className="text-[8px] sm:text-[10px] font-bold text-neutral-400">
+                        سابق
                       </span>
                     ) : isFull ? (
-                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-500 text-white">
+                      <span className="px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black bg-red-500 text-white">
                         مقبط
                       </span>
                     ) : hasWork ? (
-                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-orange-100 text-orange-800 border border-orange-200">
-                        {aptCount} موعد
+                      <span className="px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black bg-orange-100 text-orange-800 border border-orange-200">
+                        {aptCount}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-emerald-600">
+                      <span className="text-[8px] sm:text-[10px] font-bold text-emerald-600">
                         متاح
                       </span>
                     )}
@@ -502,7 +495,7 @@ export const CalendarView: React.FC = () => {
                 </div>
 
                 {/* Event Cards (Up to 3) */}
-                <div className="flex-1 flex flex-col gap-1.5 overflow-hidden">
+                <div className="flex-1 flex flex-col gap-1 sm:gap-1.5 overflow-hidden min-w-0">
                   {dayApts.slice(0, 3).map((apt) => (
                     <div
                       key={apt.id}
@@ -510,39 +503,33 @@ export const CalendarView: React.FC = () => {
                         e.stopPropagation();
                         openBookedDetail(apt);
                       }}
-                      className={`p-1.5 rounded-xl text-right transition-all border shadow-2xs space-y-0.5 ${
+                      className={`p-1 sm:p-1.5 rounded-lg sm:rounded-xl text-right transition-all border shadow-2xs space-y-0.2 sm:space-y-0.5 min-w-0 ${
                         isPast
                           ? 'bg-neutral-100 text-neutral-700 border-neutral-200 hover:bg-neutral-200'
                           : 'bg-neutral-900 text-white border-neutral-800 hover:bg-neutral-800'
                       }`}
                     >
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-mono font-black text-emerald-400">
-                          {formatTimeArabic(apt.startTime)}
+                      <div className="flex items-center justify-between text-[8px] sm:text-[10px] min-w-0">
+                        <span className="font-mono font-black text-emerald-400 shrink-0">
+                          {apt.startTime}
                         </span>
                         {apt.isCompleted && (
-                          <span className="text-[9px] text-emerald-300 font-bold">✓ تم</span>
+                          <span className="text-[8px] sm:text-[9px] text-emerald-300 font-bold shrink-0">✓</span>
                         )}
                       </div>
-                      <div className="font-black text-[11px] truncate text-white">
+                      <div className="font-black text-[8px] sm:text-[11px] truncate text-white block w-full">
                         {apt.customerName}
                       </div>
-                      <div className="text-[9px] text-neutral-400 truncate flex items-center gap-1">
-                        <span>بواسطة: {apt.bookedByTechnician || apt.technicianName || 'فني'}</span>
+                      <div className="hidden sm:block text-[9px] text-neutral-400 truncate">
+                        بواسطة: {apt.bookedByTechnician || apt.technicianName || 'فني'}
                       </div>
                     </div>
                   ))}
 
                   {aptCount > 3 && (
-                    <span className="text-[10px] font-black text-neutral-600 text-center py-0.5">
-                      +{aptCount - 3} مواعيد أخرى
+                    <span className="text-[8px] sm:text-[10px] font-black text-neutral-600 text-center py-0.2 truncate">
+                      +{aptCount - 3} المزيد
                     </span>
-                  )}
-
-                  {aptCount === 0 && !isPast && (
-                    <div className="flex-1 flex items-center justify-center text-[11px] text-neutral-300 group-hover:text-emerald-600 font-bold transition-colors">
-                      + حجز موعد جديد
-                    </div>
                   )}
                 </div>
               </div>
@@ -550,19 +537,19 @@ export const CalendarView: React.FC = () => {
           })}
         </div>
 
-        {/* Minimalist Legend Pill Bar */}
-        <div className="py-3 px-4 bg-neutral-50/80 border-t border-neutral-100 flex flex-wrap items-center justify-center gap-4 sm:gap-7 text-[11px] font-bold text-neutral-600">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-emerald-50/50"></span>
-            <span>دائرة خضراء: يوم فارغ متاح</span>
+        {/* Minimalist Legend Pill Bar (Responsive single line on mobile) */}
+        <div className="py-2.5 px-2 sm:px-4 bg-neutral-50/80 border-t border-neutral-100 flex items-center justify-center gap-3 sm:gap-7 text-[10px] sm:text-[11px] font-bold text-neutral-600">
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-emerald-500 bg-emerald-50/50"></span>
+            <span>متاح</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-orange-500 bg-orange-50/50"></span>
-            <span>دائرة برتقالية: فيه شغل ومواعيد</span>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-orange-500 bg-orange-50/50"></span>
+            <span>مواعيد</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-red-500 bg-red-50/50"></span>
-            <span>دائرة حمراء: مقبط بالكامل</span>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-red-500 bg-red-50/50"></span>
+            <span>مقبط</span>
           </div>
         </div>
 
