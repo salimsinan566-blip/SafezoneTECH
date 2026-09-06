@@ -7,10 +7,14 @@ import {
   Clock,
   User,
   CheckCircle2,
+  LayoutList,
+  LayoutGrid,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
   ARABIC_DAYS,
+  ARABIC_DAYS_SHORT,
   ARABIC_MONTHS,
   formatDateKey,
   parseDateKey,
@@ -50,6 +54,9 @@ export const CalendarView: React.FC = () => {
       localStorage.setItem('safezone_calendar_zoom', level);
     } catch {}
   };
+
+  // Mobile Ultra mode: 'vertical' (full-width cards scrolling down) or 'grid' (horizontal 7-day grid)
+  const [mobileUltraMode, setMobileUltraMode] = useState<'vertical' | 'grid'>('vertical');
 
   const handleZoomIn = () => {
     setZoomLevel((curr) => {
@@ -207,6 +214,21 @@ export const CalendarView: React.FC = () => {
   }
 
   const todayKey = formatDateKey(new Date());
+  const currentMonthDays = calendarCells.filter((c) => c.isCurrentMonth);
+
+  const handleJumpToDay = (dateKey: string) => {
+    setSelectedDate(dateKey);
+    const el = document.getElementById(`mobile-day-${dateKey}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-4', 'ring-neutral-900');
+      setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-neutral-900');
+      }, 1500);
+    } else {
+      openDayDetails(dateKey);
+    }
+  };
 
   return (
     <div
@@ -388,9 +410,11 @@ export const CalendarView: React.FC = () => {
           </div>
         </div>
 
-        {/* Days of Week Header */}
-        <div className="grid grid-cols-7 border-b border-neutral-100 text-center py-2 px-0.5 sm:px-4 bg-neutral-50/40">
-          {['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map((day, idx) => (
+        {/* Days of Week Header (Hidden on mobile when in Mobile Ultra Vertical mode) */}
+        <div className={`grid grid-cols-7 border-b border-neutral-100 text-center py-2 px-0.5 sm:px-4 bg-neutral-50/40 ${
+          zoomLevel === 'ultra' && mobileUltraMode === 'vertical' ? 'hidden sm:grid' : ''
+        }`}>
+          {ARABIC_DAYS_SHORT.map((day, idx) => (
             <div
               key={day}
               className={`text-[10px] sm:text-xs font-bold tracking-wider truncate min-w-0 ${
@@ -403,16 +427,297 @@ export const CalendarView: React.FC = () => {
           ))}
         </div>
 
+        {/* MOBILE ULTRA MODE: FULL-WIDTH VERTICAL EXPANSION ("انزل لي جوا") */}
+        {zoomLevel === 'ultra' && mobileUltraMode === 'vertical' && (
+          <div className="sm:hidden space-y-3 p-2 bg-neutral-50/50">
+            {/* Top Navigation Bar: Sticky Apple Day Selector & View Toggle */}
+            <div className="sticky top-0 z-20 -mx-2 px-2.5 py-2.5 bg-white/95 backdrop-blur-md border-b border-neutral-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] font-black text-neutral-600">
+                  التنقل السريع بالأيام:
+                </span>
+                <div className="flex items-center gap-1 bg-neutral-100 p-0.5 rounded-xl border border-neutral-200">
+                  <button
+                    type="button"
+                    onClick={() => setMobileUltraMode('vertical')}
+                    className="px-2 py-1 rounded-lg text-[10px] font-black bg-black text-white shadow-xs flex items-center gap-1"
+                  >
+                    <LayoutList className="w-3 h-3" />
+                    <span>عمودي مريح</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileUltraMode('grid')}
+                    className="px-2 py-1 rounded-lg text-[10px] font-black text-neutral-600 hover:text-black flex items-center gap-1"
+                  >
+                    <LayoutGrid className="w-3 h-3" />
+                    <span>شبكة 7 أيام</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Apple-style Horizontal Days Strip */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+                {currentMonthDays.map((c) => {
+                  const isToday = c.dateKey === todayKey;
+                  const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === c.dateKey) : [];
+                  const isFull = isDayFullyBooked(c.dateKey);
+                  const hasWork = dayApts.length > 0 && !isFull;
+                  const isPast = c.dateKey < todayKey;
+                  const isSelected = c.dateKey === selectedDate;
+
+                  return (
+                    <button
+                      key={c.dateKey}
+                      type="button"
+                      onClick={() => handleJumpToDay(c.dateKey)}
+                      className={`shrink-0 flex flex-col items-center justify-center w-11 py-1.5 rounded-xl border transition-all ${
+                        isSelected
+                          ? 'bg-neutral-900 text-white border-black shadow-xs ring-2 ring-black/20'
+                          : isToday
+                          ? 'bg-red-50 border-red-300 text-red-700 font-black'
+                          : 'bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-100'
+                      }`}
+                    >
+                      <span className="text-[9px] font-bold opacity-75">
+                        {ARABIC_DAYS_SHORT[c.date.getDay()]}
+                      </span>
+                      <span className="text-xs font-black leading-tight">
+                        {c.dayNumber}
+                      </span>
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                          isPast
+                            ? 'bg-neutral-300'
+                            : isFull
+                            ? 'bg-red-500'
+                            : hasWork
+                            ? 'bg-orange-500'
+                            : 'bg-emerald-500'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Continuous Vertical Feed of Days ("انزل لي جوا") */}
+            <div className="space-y-3 pt-1">
+              {currentMonthDays.map((c) => {
+                const isToday = c.dateKey === todayKey;
+                const isPast = c.dateKey < todayKey;
+                const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === c.dateKey) : [];
+                const aptCount = dayApts.length;
+                const isFull = isDayFullyBooked(c.dateKey);
+                const hasWork = aptCount > 0 && !isFull;
+
+                return (
+                  <div
+                    key={c.dateKey}
+                    id={`mobile-day-${c.dateKey}`}
+                    className={`rounded-2xl border-2 p-3.5 transition-all shadow-xs space-y-3 scroll-mt-28 ${
+                      isToday
+                        ? 'bg-white border-black/80 shadow-md ring-1 ring-black/10'
+                        : isPast
+                        ? 'bg-neutral-50/70 border-neutral-200/80'
+                        : isFull
+                        ? 'bg-red-50/30 border-red-200'
+                        : hasWork
+                        ? 'bg-orange-50/20 border-orange-200'
+                        : 'bg-white border-neutral-200'
+                    }`}
+                  >
+                    {/* Day Header */}
+                    <div className="flex items-center justify-between gap-2 border-b border-neutral-100 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0 shadow-2xs ${
+                            isToday
+                              ? 'bg-red-600 text-white'
+                              : isPast
+                              ? 'bg-neutral-200 text-neutral-600'
+                              : isFull
+                              ? 'bg-red-500 text-white'
+                              : hasWork
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-emerald-600 text-white'
+                          }`}
+                        >
+                          {c.dayNumber}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-black text-neutral-900">
+                              {ARABIC_DAYS[c.date.getDay()]}، {c.dayNumber} {ARABIC_MONTHS[currentMonth].split('/')[0].trim()}
+                            </h3>
+                            {isToday && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white">
+                                اليوم
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-bold text-neutral-400 font-mono">
+                            {c.dateKey}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Badges & Actions */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isPast ? (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-bold bg-neutral-200 text-neutral-600">
+                            سابق
+                          </span>
+                        ) : isFull ? (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-red-100 text-red-700 border border-red-300">
+                            مقبط ({aptCount})
+                          </span>
+                        ) : hasWork ? (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-orange-100 text-orange-800 border border-orange-300">
+                            {aptCount} موعد
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            متاح بالكامل
+                          </span>
+                        )}
+
+                        {!isPast && (
+                          <button
+                            type="button"
+                            onClick={() => openDayDetails(c.dateKey)}
+                            className="px-2.5 py-1 bg-black text-white hover:bg-neutral-800 active:scale-95 text-xs font-black rounded-xl transition-all shadow-2xs"
+                            title="عرض وإدارة ساعات هذا اليوم"
+                          >
+                            إدارة
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Appointments List (Full-Width Roomy Cards) */}
+                    {dayApts.length > 0 ? (
+                      <div className="space-y-2">
+                        {dayApts.map((apt) => (
+                          <div
+                            key={apt.id}
+                            onClick={() => openBookedDetail(apt)}
+                            className="p-3 rounded-xl border border-neutral-200 bg-neutral-900 text-white hover:border-black active:scale-[0.99] transition-all cursor-pointer shadow-xs space-y-2"
+                          >
+                            {/* Row 1: Time + Status */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 font-mono text-xs sm:text-sm font-black text-emerald-400">
+                                <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>{apt.startTime}</span>
+                                {apt.endTime && <span>- {apt.endTime}</span>}
+                              </div>
+
+                              <div>
+                                {apt.isCompleted ? (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> منجز
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                    قيد التنفيذ
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Row 2: Customer Name */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-sm font-black text-white flex items-center gap-1.5">
+                                <User className="w-4 h-4 text-neutral-400 shrink-0" />
+                                <span>{apt.customerName}</span>
+                              </div>
+
+                              {apt.customerPhone && (
+                                <span className="text-xs font-mono text-neutral-400 dir-ltr">
+                                  {apt.customerPhone}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Row 3: Technician & Action */}
+                            <div className="flex items-center justify-between text-xs text-neutral-400 border-t border-neutral-800 pt-2">
+                              <span>الفني: <strong className="text-neutral-200">{apt.bookedByTechnician || apt.technicianName || 'فني'}</strong></span>
+                              <span className="text-[11px] text-emerald-400 font-bold hover:underline">
+                                عرض وتعديل التفاصيل ←
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div>
+                        {!isPast ? (
+                          <div
+                            onClick={() => openDayDetails(c.dateKey)}
+                            className="p-3 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50 cursor-pointer transition-all flex items-center justify-between gap-2"
+                          >
+                            <div className="flex items-center gap-2 text-xs font-black text-emerald-800">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              <span>جميع ساعات هذا اليوم شاغرة ومتاحة للحجز</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 shadow-2xs flex items-center gap-1"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>حجز موعد</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="py-2 text-center text-xs text-neutral-400 font-medium">
+                            يوم سابق - لا توجد مواعيد مسجلة
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Back to Vertical Toggle (Shown on mobile when user switches to Grid mode in Ultra) */}
+        {zoomLevel === 'ultra' && mobileUltraMode === 'grid' && (
+          <div className="sm:hidden px-3 py-2 bg-neutral-100 border-b border-neutral-200 flex items-center justify-between">
+            <span className="text-xs font-black text-neutral-600">اسحب يميناً ويساراً للتنقل:</span>
+            <button
+              type="button"
+              onClick={() => setMobileUltraMode('vertical')}
+              className="px-2.5 py-1 rounded-xl text-xs font-black bg-black text-white flex items-center gap-1 shadow-xs"
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span>العودة للعرض العمودي المريح</span>
+            </button>
+          </div>
+        )}
+
         {/* Calendar Days Grid (Adapts smoothly across Compact / Medium / Detailed / Ultra) */}
-        <div className={`grid grid-cols-7 transition-all duration-200 w-full ${
-          zoomLevel === 'compact'
-            ? 'gap-y-2 sm:gap-y-3 gap-x-0.5 sm:gap-x-2 p-1.5 sm:p-6'
-            : zoomLevel === 'medium'
-            ? 'gap-1 sm:gap-2 p-1 sm:p-5'
-            : zoomLevel === 'detailed'
-            ? 'gap-1 sm:gap-2.5 p-1 sm:p-5'
-            : 'gap-1.5 sm:gap-3 p-1 sm:p-5'
+        <div className={`${
+          zoomLevel === 'ultra' && mobileUltraMode === 'vertical'
+            ? 'hidden sm:block'
+            : zoomLevel === 'ultra' && mobileUltraMode === 'grid'
+            ? 'overflow-x-auto pb-2'
+            : ''
         }`}>
+          <div className={`grid grid-cols-7 transition-all duration-200 w-full ${
+            zoomLevel === 'ultra' && mobileUltraMode === 'grid' ? 'min-w-[720px]' : ''
+          } ${
+            zoomLevel === 'compact'
+              ? 'gap-y-2 sm:gap-y-3 gap-x-0.5 sm:gap-x-2 p-1.5 sm:p-6'
+              : zoomLevel === 'medium'
+              ? 'gap-1 sm:gap-2 p-1 sm:p-5'
+              : zoomLevel === 'detailed'
+              ? 'gap-1 sm:gap-2.5 p-1 sm:p-5'
+              : 'gap-1.5 sm:gap-3 p-1 sm:p-5'
+          }`}>
           {calendarCells.map((cell) => {
             const isToday = cell.dateKey === todayKey;
             const isPast = cell.dateKey < todayKey;
@@ -676,7 +981,7 @@ export const CalendarView: React.FC = () => {
               <div
                 key={cell.dateKey}
                 onClick={() => openDayDetails(cell.dateKey)}
-                className={`group relative flex flex-col p-1.5 sm:p-3 rounded-2xl border-2 transition-all cursor-pointer min-h-[145px] sm:min-h-[235px] text-right min-w-0 overflow-hidden shadow-xs hover:shadow-md ${
+                className={`group relative flex flex-col p-2 sm:p-3 rounded-2xl border-2 transition-all cursor-pointer min-h-[160px] sm:min-h-[260px] lg:min-h-[290px] text-right min-w-0 shadow-xs hover:shadow-md ${
                   isPast
                     ? 'bg-neutral-50 border-neutral-200/90'
                     : isFull
@@ -731,7 +1036,7 @@ export const CalendarView: React.FC = () => {
                 </div>
 
                 {/* All Appointments in Full Detail */}
-                <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto min-w-0">
+                <div className="flex-1 flex flex-col gap-1.5 min-w-0">
                   {dayApts.map((apt) => (
                     <div
                       key={apt.id}
@@ -778,14 +1083,15 @@ export const CalendarView: React.FC = () => {
                   {/* Empty state hint */}
                   {aptCount === 0 && !isPast && (
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-2 text-neutral-400">
-                      <span className="text-[11px] font-bold text-neutral-400">فارغ بالكامل</span>
-                      <span className="text-[9px] text-emerald-600 font-bold mt-1">+ انقر للحجز السريع</span>
+                      <span className="text-xs font-bold text-neutral-400">فارغ بالكامل</span>
+                      <span className="text-[10px] text-emerald-600 font-bold mt-1">+ انقر للحجز السريع</span>
                     </div>
                   )}
                 </div>
               </div>
             );
           })}
+          </div>
         </div>
 
         {/* Minimalist Legend Pill Bar (Responsive single line on mobile) */}
