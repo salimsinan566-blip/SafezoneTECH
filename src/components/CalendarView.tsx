@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   ChevronRight,
   ChevronLeft,
@@ -148,7 +148,7 @@ export const CalendarView: React.FC = () => {
           {calendarCells.map((cell) => {
             const isToday = cell.dateKey === todayKey;
             const isFull = isDayFullyBooked(cell.dateKey);
-            const dayApts = appointments.filter((a) => a.date === cell.dateKey);
+            const dayApts = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === cell.dateKey) : [];
             const aptCount = dayApts.length;
 
             return (

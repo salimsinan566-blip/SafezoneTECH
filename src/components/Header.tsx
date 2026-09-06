@@ -50,9 +50,9 @@ export const Header: React.FC = () => {
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-black/10 bg-neutral-50 hover:bg-neutral-100 text-xs font-bold text-neutral-900 transition-colors"
                 >
                   <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black">
-                    {currentUser.name.charAt(0)}
+                    {(currentUser.name || 'ف').charAt(0)}
                   </span>
-                  <span className="max-w-[90px] sm:max-w-none truncate">{currentUser.name}</span>
+                  <span className="max-w-[90px] sm:max-w-none truncate">{currentUser.name || 'فني'}</span>
                 </button>
               ) : (
                 <button
@@ -72,8 +72,8 @@ export const Header: React.FC = () => {
                 >
                   <div className="px-3 py-2 border-b border-neutral-100 text-neutral-500 text-[11px]">
                     مسجل باسم:
-                    <div className="font-bold text-black text-sm">{currentUser.name}</div>
-                    <div className="text-[10px] text-neutral-400 truncate">{currentUser.email}</div>
+                    <div className="font-bold text-black text-sm">{currentUser.name || 'فني'}</div>
+                    <div className="text-[10px] text-neutral-400 truncate">{currentUser.email || ''}</div>
                   </div>
                   <button
                     onClick={() => {

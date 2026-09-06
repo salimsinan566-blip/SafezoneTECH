@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, ChevronDown, ChevronUp, Clock, Calendar, CheckCircle2, User, Lock, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -33,7 +33,7 @@ export const DayDetailsModal: React.FC = () => {
   const year = parsed.getFullYear();
 
   // Get current active preset
-  const currentPresets = settings.quickPresets && settings.quickPresets.length > 0
+  const currentPresets = settings?.quickPresets && settings.quickPresets.length > 0
     ? settings.quickPresets
     : [
         { id: 'p1', label: 'معاينة (30 د)', durationMinutes: 30 },
@@ -42,14 +42,14 @@ export const DayDetailsModal: React.FC = () => {
         { id: 'p4', label: '8 كاميرات (3 س)', durationMinutes: 180 },
       ];
 
-  const activePreset = currentPresets.find((p) => p.id === activePresetId) || currentPresets[0];
+  const activePreset = (currentPresets && currentPresets.find((p) => p && p.id === activePresetId)) || currentPresets[0] || { id: 'p1', label: 'معاينة (30 د)', durationMinutes: 30 };
 
   // Working hours range
-  const startHour = parseInt(settings.workStartTime.split(':')[0], 10) || 8;
-  const endHour = parseInt(settings.workEndTime.split(':')[0], 10) || 21;
+  const startHour = parseInt((settings?.workStartTime || '08:00').split(':')[0], 10) || 8;
+  const endHour = parseInt((settings?.workEndTime || '21:00').split(':')[0], 10) || 21;
 
   // Day appointments
-  const dayAppointments = appointments.filter((a) => a.date === selectedDate);
+  const dayAppointments = Array.isArray(appointments) ? appointments.filter((a) => a && a.date === selectedDate) : [];
 
   const toggleHourDropdown = (hour: number, e: React.MouseEvent) => {
     e.stopPropagation();

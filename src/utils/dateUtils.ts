@@ -22,6 +22,7 @@ export const ARABIC_MONTHS = [
  * Format Date object to YYYY-MM-DD
  */
 export function formatDateKey(date: Date): string {
+  if (!date || isNaN(date.getTime())) date = new Date();
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -31,19 +32,25 @@ export function formatDateKey(date: Date): string {
 /**
  * Parse YYYY-MM-DD to Date object
  */
-export function parseDateKey(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d);
+export function parseDateKey(dateStr?: string | null): Date {
+  if (!dateStr || typeof dateStr !== 'string') return new Date();
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length < 3 || parts.some(isNaN)) return new Date();
+  const [y, m, d] = parts;
+  const parsed = new Date(y, m - 1, d);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 /**
  * Calculate total working hours in day based on settings
  */
-export function calculateDailyMaxHours(startTime: string, endTime: string): number {
-  const [startH, startM] = startTime.split(':').map(Number);
-  const [endH, endM] = endTime.split(':').map(Number);
-  const startMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
+export function calculateDailyMaxHours(startTime?: string, endTime?: string): number {
+  const start = startTime || '08:00';
+  const end = endTime || '21:00';
+  const [startH = 8, startM = 0] = start.split(':').map(Number);
+  const [endH = 21, endM = 0] = end.split(':').map(Number);
+  const startMinutes = (startH || 0) * 60 + (startM || 0);
+  const endMinutes = (endH || 0) * 60 + (endM || 0);
   const diff = Math.max(0, endMinutes - startMinutes);
   return Number((diff / 60).toFixed(1));
 }
@@ -51,9 +58,10 @@ export function calculateDailyMaxHours(startTime: string, endTime: string): numb
 /**
  * Add hours to a time string (e.g. "09:00" + 3 -> "12:00")
  */
-export function addHoursToTime(timeStr: string, hours: number): string {
-  const [h, m] = timeStr.split(':').map(Number);
-  const totalMinutes = Math.round(h * 60 + m + hours * 60);
+export function addHoursToTime(timeStr?: string, hours: number = 1): string {
+  const safeTime = timeStr && timeStr.includes(':') ? timeStr : '08:00';
+  const [h = 8, m = 0] = safeTime.split(':').map(Number);
+  const totalMinutes = Math.round((h || 0) * 60 + (m || 0) + (hours || 0) * 60);
   const newH = Math.floor(totalMinutes / 60) % 24;
   const newM = totalMinutes % 60;
   return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
@@ -62,35 +70,36 @@ export function addHoursToTime(timeStr: string, hours: number): string {
 /**
  * Add minutes to a time string (e.g. "09:15" + 30 -> "09:45")
  */
-export function addMinutesToTime(timeStr: string, minutes: number): string {
-  const [h, m] = timeStr.split(':').map(Number);
-  const totalMinutes = Math.round(h * 60 + m + minutes);
+export function addMinutesToTime(timeStr?: string, minutes: number = 30): string {
+  const safeTime = timeStr && timeStr.includes(':') ? timeStr : '08:00';
+  const [h = 8, m = 0] = safeTime.split(':').map(Number);
+  const totalMinutes = Math.round((h || 0) * 60 + (m || 0) + (minutes || 0));
   const newH = Math.floor(totalMinutes / 60) % 24;
   const newM = totalMinutes % 60;
   return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
 }
 
-
 /**
  * Format 24h time to 12h Arabic format with صباحاً / مساءً
  */
-export function formatTimeArabic(timeStr: string): string {
-  if (!timeStr) return '';
-  const [h, m] = timeStr.split(':').map(Number);
-  const period = h >= 12 ? 'مساءً' : 'صباحاً';
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+export function formatTimeArabic(timeStr?: string): string {
+  if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return '';
+  const [h = 0, m = 0] = timeStr.split(':').map(Number);
+  const period = (h || 0) >= 12 ? 'مساءً' : 'صباحاً';
+  const hour12 = (h || 0) % 12 === 0 ? 12 : (h || 0) % 12;
+  return `${hour12}:${String(m || 0).padStart(2, '0')} ${period}`;
 }
 
 /**
  * Check if two time intervals overlap on the same day
  */
 export function isTimeOverlapping(
-  start1: string,
-  end1: string,
-  start2: string,
-  end2: string
+  start1?: string,
+  end1?: string,
+  start2?: string,
+  end2?: string
 ): boolean {
+  if (!start1 || !end1 || !start2 || !end2) return false;
   return start1 < end2 && end1 > start2;
 }
 

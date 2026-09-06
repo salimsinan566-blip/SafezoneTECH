@@ -84,12 +84,23 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<WorkSettings>(loadSettings);
-  const [appointments, setAppointments] = useState<Appointment[]>(loadAppointments);
+  const [settings, setSettings] = useState<WorkSettings>(() => {
+    const s = loadSettings();
+    return {
+      ...s,
+      workStartTime: s?.workStartTime || '08:00',
+      workEndTime: s?.workEndTime || '21:00',
+      quickPresets: (s?.quickPresets && s.quickPresets.length >= 4) ? s.quickPresets : DEFAULT_QUICK_PRESETS,
+    };
+  });
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const list = loadAppointments();
+    return Array.isArray(list) ? list.filter(Boolean) : [];
+  });
   const [selectedDate, setSelectedDate] = useState<string>(() => formatDateKey(new Date()));
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     const loaded = loadSettings();
-    return loaded.isPinEnabled;
+    return Boolean(loaded?.isPinEnabled);
   });
   const [activeModal, setActiveModal] = useState<'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -121,13 +132,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (isSupabaseConfigured) {
       fetchAppointmentsFromSupabase().then((data) => {
-        if (data && data.length > 0) {
-          setAppointments(data);
+        if (data && Array.isArray(data)) {
+          setAppointments(data.filter(Boolean));
         }
       });
       fetchSettingsFromSupabase().then((data) => {
         if (data) {
-          setSettings(data);
+          setSettings({
+            ...data,
+            workStartTime: data.workStartTime || '08:00',
+            workEndTime: data.workEndTime || '21:00',
+            quickPresets: (data.quickPresets && data.quickPresets.length >= 4) ? data.quickPresets : DEFAULT_QUICK_PRESETS,
+          });
         }
       });
 
@@ -140,7 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             { event: '*', schema: 'public', table: 'appointments' },
             () => {
               fetchAppointmentsFromSupabase().then((data) => {
-                if (data) setAppointments(data);
+                if (data && Array.isArray(data)) setAppointments(data.filter(Boolean));
               });
             }
           )
@@ -194,13 +210,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getDayWorkload = (dateStr: string): DayWorkload => {
-    return calculateDayWorkload(dateStr, appointments, settings);
+    return calculateDayWorkload(dateStr, appointments || [], settings);
   };
 
   const isDayFullyBooked = (dateStr: string): boolean => {
-    const dayAppointments = appointments.filter((a) => a.date === dateStr);
-    const totalBookedHours = dayAppointments.reduce((sum, a) => sum + (Number(a.durationHours) || 0), 0);
-    const maxWorkingHours = calculateDailyMaxHours(settings.workStartTime, settings.workEndTime) || 13;
+    if (!dateStr || !Array.isArray(appointments)) return false;
+    const dayAppointments = appointments.filter((a) => a && a.date === dateStr);
+    const totalBookedHours = dayAppointments.reduce((sum, a) => sum + (Number(a?.durationHours) || 0), 0);
+    const maxWorkingHours = calculateDailyMaxHours(settings?.workStartTime, settings?.workEndTime) || 13;
     return totalBookedHours >= maxWorkingHours;
   };
 
@@ -210,8 +227,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     endTime: string,
     ignoreId?: string
   ): Appointment | null => {
+    if (!date || !startTime || !endTime || !Array.isArray(appointments)) return null;
     const found = appointments.find(
       (a) =>
+        a &&
         a.date === date &&
         a.id !== ignoreId &&
         isTimeOverlapping(startTime, endTime, a.startTime, a.endTime)
