@@ -44,11 +44,14 @@ export const DEFAULT_SERVICE_PACKAGES: ServicePackage[] = [
   },
 ];
 
+import { DEFAULT_QUICK_PRESETS } from '../lib/supabase';
+
 export const DEFAULT_SETTINGS: WorkSettings = {
   workStartTime: '08:00',
-  workEndTime: '18:00',
+  workEndTime: '21:00',
   daysOff: [5], // Friday
   servicePackages: DEFAULT_SERVICE_PACKAGES,
+  quickPresets: DEFAULT_QUICK_PRESETS,
   technicians: DEFAULT_TECHNICIANS,
   pinCode: '1234',
   isPinEnabled: false,
@@ -73,6 +76,7 @@ export function loadSettings(): WorkSettings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      quickPresets: parsed.quickPresets || DEFAULT_QUICK_PRESETS,
       technicians: parsed.technicians || DEFAULT_TECHNICIANS,
     };
   } catch {

@@ -60,6 +60,18 @@ export function addHoursToTime(timeStr: string, hours: number): string {
 }
 
 /**
+ * Add minutes to a time string (e.g. "09:15" + 30 -> "09:45")
+ */
+export function addMinutesToTime(timeStr: string, minutes: number): string {
+  const [h, m] = timeStr.split(':').map(Number);
+  const totalMinutes = Math.round(h * 60 + m + minutes);
+  const newH = Math.floor(totalMinutes / 60) % 24;
+  const newM = totalMinutes % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+}
+
+
+/**
  * Format 24h time to 12h Arabic format with صباحاً / مساءً
  */
 export function formatTimeArabic(timeStr: string): string {

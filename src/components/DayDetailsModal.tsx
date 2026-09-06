@@ -1,25 +1,30 @@
-import React from 'react';
-import { X, Plus, Calendar, Clock, AlertCircle } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { X, ChevronDown, ChevronUp, Clock, Calendar, CheckCircle2, User, Lock, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
   ARABIC_DAYS,
   ARABIC_MONTHS,
-  getWorkloadStyles,
   parseDateKey,
+  formatTimeArabic,
+  addMinutesToTime,
+  isTimeOverlapping,
 } from '../utils/dateUtils';
-import { AppointmentCard } from './AppointmentCard';
+import { QuickPreset, Appointment } from '../types';
 
 export const DayDetailsModal: React.FC = () => {
   const {
     selectedDate,
     closeModals,
-    openNewAppointment,
-    getDayWorkload,
     settings,
+    appointments,
+    activePresetId,
+    setActivePresetId,
+    openQuickBook,
+    openBookedDetail,
   } = useApp();
 
-  const workload = getDayWorkload(selectedDate);
-  const styles = getWorkloadStyles(workload.level);
+  // Track expanded hour dropdowns for quarter-hour selection
+  const [expandedHours, setExpandedHours] = useState<{ [hour: number]: boolean }>({});
 
   const parsed = parseDateKey(selectedDate);
   const dayName = ARABIC_DAYS[parsed.getDay()];
@@ -27,120 +32,254 @@ export const DayDetailsModal: React.FC = () => {
   const monthName = ARABIC_MONTHS[parsed.getMonth()].split('/')[0].trim();
   const year = parsed.getFullYear();
 
+  // Get current active preset
+  const currentPresets = settings.quickPresets && settings.quickPresets.length > 0
+    ? settings.quickPresets
+    : [
+        { id: 'p1', label: 'معاينة (30 د)', durationMinutes: 30 },
+        { id: 'p2', label: 'صيانة (1 س)', durationMinutes: 60 },
+        { id: 'p3', label: '4 كاميرات (2 س)', durationMinutes: 120 },
+        { id: 'p4', label: '8 كاميرات (3 س)', durationMinutes: 180 },
+      ];
+
+  const activePreset = currentPresets.find((p) => p.id === activePresetId) || currentPresets[0];
+
+  // Working hours range
+  const startHour = parseInt(settings.workStartTime.split(':')[0], 10) || 8;
+  const endHour = parseInt(settings.workEndTime.split(':')[0], 10) || 21;
+
+  // Day appointments
+  const dayAppointments = appointments.filter((a) => a.date === selectedDate);
+
+  const toggleHourDropdown = (hour: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedHours((prev) => ({
+      ...prev,
+      [hour]: !prev[hour],
+    }));
+  };
+
+  // Find appointment overlapping with a specific time window
+  const getOverlappingAppointment = (startTime: string, endTime: string): Appointment | undefined => {
+    return dayAppointments.find((apt) =>
+      isTimeOverlapping(startTime, endTime, apt.startTime, apt.endTime)
+    );
+  };
+
+  // Generate hours list
+  const hoursList = [];
+  for (let h = startHour; h < endHour; h++) {
+    const hourStr = String(h).padStart(2, '0');
+    const nextHourStr = String(h + 1).padStart(2, '0');
+    const slotStart = `${hourStr}:00`;
+    const slotEnd = `${nextHourStr}:00`;
+
+    // Check if the entire hour or any part has an appointment
+    const overlapApt = getOverlappingAppointment(slotStart, slotEnd);
+
+    hoursList.push({
+      hour: h,
+      slotStart,
+      slotEnd,
+      overlapApt,
+    });
+  }
+
+  // Handle booking an available time
+  const handleSlotClick = (startTime: string) => {
+    const duration = activePreset.durationMinutes;
+    const endTime = addMinutesToTime(startTime, duration);
+
+    // Check if conflicting
+    const conflict = getOverlappingAppointment(startTime, endTime);
+    if (conflict) {
+      alert(`عذراً، هذا الوقت يتعارض مع موعد محجوز مسبقاً [${conflict.customerName}]!`);
+      return;
+    }
+
+    openQuickBook(selectedDate, startTime, duration);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-black/10 overflow-hidden">
         
         {/* Modal Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-amber-100 text-amber-800">
-                <Calendar className="w-5 h-5" />
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-black/10 flex items-center justify-between bg-neutral-50/80">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center shadow-xs">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-black">
+                {dayName}، {dayNum} {monthName} {year}
+              </h3>
+              <span className="text-[11px] font-bold text-neutral-500 font-mono">
+                {selectedDate}
               </span>
-              <div>
-                <h3 className="text-lg sm:text-xl font-black text-slate-900">
-                  {dayName}، {dayNum} {monthName} {year}
-                </h3>
-                <span className="text-xs font-bold text-slate-400">
-                  {selectedDate}
-                </span>
-              </div>
             </div>
           </div>
 
           <button
             onClick={closeModals}
-            className="p-2 rounded-xl hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors"
+            className="p-1.5 rounded-xl hover:bg-neutral-200 text-neutral-500 hover:text-black transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Workload Status Bar in Modal */}
-        <div className="px-4 sm:px-6 py-3 border-b border-slate-100 bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border ${styles.badgeBg}`}
-              >
-                <span className={`w-2 h-2 rounded-full ${styles.dotBg}`}></span>
-                {styles.statusText}
-              </span>
-
-              <span className="text-xs font-extrabold text-slate-700">
-                {workload.totalBookedHours} ساعات محجوزة من {workload.maxWorkingHours} ساعات دوام
-              </span>
-            </div>
-
-            <span className="text-xs font-bold text-slate-400">
-              نسبة الإشغال: {workload.percentage}%
+        {/* 4 Quick Duration Presets */}
+        <div className="px-4 py-3 sm:px-6 border-b border-black/10 bg-white">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black text-neutral-800 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              الخيارات السريعة (اختر مدة الحجز أولاً):
+            </span>
+            <span className="text-[10px] text-neutral-500 font-bold">
+              المدة: {activePreset.durationMinutes} دقيقة
             </span>
           </div>
 
-          <div className="mt-2 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${workload.percentage}%`,
-                backgroundColor: styles.colorHex,
-              }}
-            ></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            {currentPresets.slice(0, 4).map((preset) => {
+              const isSelected = preset.id === activePreset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setActivePresetId(preset.id)}
+                  className={`py-2 px-2 rounded-xl text-xs font-black transition-all border text-center ${
+                    isSelected
+                      ? 'bg-black text-white border-black shadow-sm scale-[1.02]'
+                      : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Content Body: List of Appointments */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-black text-slate-800">
-              المواعيد المسجلة في هذا اليوم ({workload.appointmentCount})
-            </h4>
-
-            <button
-              onClick={() => openNewAppointment(selectedDate)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-sm transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>إضافة موعد لهذا اليوم</span>
-            </button>
+        {/* Hours List (8am to 9pm) */}
+        <div className="p-3 sm:p-6 overflow-y-auto flex-1 space-y-2.5">
+          <div className="text-[11px] font-bold text-neutral-500 mb-1 flex items-center justify-between">
+            <span>جدول الساعات المتاحة والمحجوزة</span>
+            <span>دوام: {settings.workStartTime} إلى {settings.workEndTime}</span>
           </div>
 
-          {workload.appointments.length === 0 ? (
-            <div className="text-center py-10 px-4 bg-emerald-50/50 rounded-2xl border border-emerald-200">
-              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
-                <Clock className="w-6 h-6" />
+          {hoursList.map(({ hour, slotStart, slotEnd, overlapApt }) => {
+            const isBooked = Boolean(overlapApt);
+            const isExpanded = Boolean(expandedHours[hour]);
+
+            return (
+              <div key={hour} className="space-y-1">
+                {/* Main Hour Card */}
+                {isBooked ? (
+                  // Booked Slot Card
+                  <div
+                    onClick={() => overlapApt && openBookedDetail(overlapApt)}
+                    className="w-full p-3 rounded-2xl bg-neutral-900 text-white flex items-center justify-between cursor-pointer hover:bg-neutral-800 transition-colors shadow-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-1.5 rounded-lg bg-neutral-800 text-neutral-300">
+                        <Lock className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-neutral-300">
+                            {formatTimeArabic(overlapApt!.startTime)} - {formatTimeArabic(overlapApt!.endTime)}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700">
+                            محجوز
+                          </span>
+                        </div>
+                        <div className="text-sm font-black text-white mt-0.5">
+                          {overlapApt!.customerName}
+                        </div>
+                        <div className="text-[10px] text-neutral-400">
+                          حجز بواسطة: <span className="text-neutral-200 font-bold">{overlapApt!.bookedByTechnician || overlapApt!.technicianName || 'فني'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-left shrink-0">
+                      <span className="text-[11px] font-bold text-neutral-400 hover:text-white underline">
+                        عرض / تعديل
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  // Available Hour Card
+                  <div className="relative flex items-center rounded-2xl border border-black/15 bg-white hover:border-black transition-all overflow-hidden">
+                    {/* Main Clickable Area to Book Hour directly */}
+                    <button
+                      type="button"
+                      onClick={() => handleSlotClick(slotStart)}
+                      className="flex-1 p-3 text-right flex items-center justify-between hover:bg-neutral-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        <div>
+                          <div className="font-mono text-xs font-black text-black">
+                            {formatTimeArabic(slotStart)}
+                          </div>
+                          <span className="text-[11px] font-bold text-neutral-400">
+                            متاح للحجز ({activePreset.label})
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-xs font-black text-black px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-black hover:text-white transition-colors">
+                        حجز الآن
+                      </span>
+                    </button>
+
+                    {/* Quarter-Hour Dropdown Arrow Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleHourDropdown(hour, e)}
+                      title="تخصيص ربع الساعة (:00, :15, :30, :45)"
+                      className="p-3 border-r border-black/10 hover:bg-neutral-100 text-neutral-600 hover:text-black transition-colors flex items-center justify-center shrink-0"
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Quarter-Hour Sub-slots Dropdown */}
+                {isExpanded && !isBooked && (
+                  <div className="grid grid-cols-4 gap-1.5 p-2 bg-neutral-100/70 rounded-xl border border-black/10 animate-in slide-in-from-top-1 duration-150">
+                    {['00', '15', '30', '45'].map((min) => {
+                      const qTime = `${String(hour).padStart(2, '0')}:${min}`;
+                      const qEndTime = addMinutesToTime(qTime, activePreset.durationMinutes);
+                      const qConflict = getOverlappingAppointment(qTime, qEndTime);
+
+                      return (
+                        <button
+                          key={min}
+                          type="button"
+                          disabled={Boolean(qConflict)}
+                          onClick={() => handleSlotClick(qTime)}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition-all text-center ${
+                            qConflict
+                              ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed line-through'
+                              : 'bg-white hover:bg-black hover:text-white text-black border border-black/10 shadow-xs'
+                          }`}
+                        >
+                          {qTime}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <h5 className="font-bold text-emerald-900 text-base mb-1">
-                اليوم فارغ بالكامل (أخضر)
-              </h5>
-              <p className="text-xs font-semibold text-emerald-700 max-w-sm mx-auto mb-4">
-                لا توجد أي مواعيد محجوزة حتى الآن، يمكنك جدولة مواعيد جديدة في ساعات الدوام ({settings.workStartTime} إلى {settings.workEndTime}).
-              </p>
-              <button
-                onClick={() => openNewAppointment(selectedDate)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                <span>تسجيل موعد الآن</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {workload.appointments.map((apt) => (
-                <AppointmentCard key={apt.id} appointment={apt} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-          <button
-            onClick={closeModals}
-            className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition-colors"
-          >
-            إغلاق
-          </button>
+            );
+          })}
         </div>
 
       </div>

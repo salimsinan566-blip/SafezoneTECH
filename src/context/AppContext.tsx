@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Appointment, DayWorkload, WorkSettings } from '../types';
+import { Appointment, DayWorkload, WorkSettings, TechnicianUser, QuickPreset } from '../types';
 import {
   calculateDayWorkload,
   formatDateKey,
   isTimeOverlapping,
+  addMinutesToTime,
+  calculateDailyMaxHours,
 } from '../utils/dateUtils';
 import {
   loadAppointments,
@@ -12,12 +14,16 @@ import {
   saveSettings,
 } from '../utils/storage';
 import {
+  supabase,
   isSupabaseConfigured,
   fetchAppointmentsFromSupabase,
   fetchSettingsFromSupabase,
   upsertAppointmentToSupabase,
   deleteAppointmentFromSupabase,
   saveSettingsToSupabase,
+  getCurrentTechnicianUser,
+  signOutTechnician,
+  DEFAULT_QUICK_PRESETS,
 } from '../lib/supabase';
 
 interface AppContextType {
@@ -26,16 +32,32 @@ interface AppContextType {
   selectedDate: string;
   isLocked: boolean;
   isSupabaseConnected: boolean;
-  activeModal: 'day-details' | 'appointment' | 'settings' | null;
+  activeModal: 'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null;
   editingAppointment: Appointment | null;
+  viewingAppointment: Appointment | null;
+  selectedSlotToBook: { date: string; startTime: string; endTime: string; durationMinutes: number } | null;
+  activePresetId: string;
+  currentUser: TechnicianUser | null;
+  isAuthModalOpen: boolean;
   notification: { message: string; type: 'success' | 'warning' | 'info' | 'error' } | null;
+
   setSelectedDate: (date: string) => void;
-  setActiveModal: (modal: 'day-details' | 'appointment' | 'settings' | null) => void;
+  setActiveModal: (modal: 'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null) => void;
   setEditingAppointment: (appointment: Appointment | null) => void;
+  setViewingAppointment: (appointment: Appointment | null) => void;
+  setSelectedSlotToBook: (slot: { date: string; startTime: string; endTime: string; durationMinutes: number } | null) => void;
+  setActivePresetId: (id: string) => void;
+  setIsAuthModalOpen: (open: boolean) => void;
+  setCurrentUser: (user: TechnicianUser | null) => void;
+
   openNewAppointment: (date?: string) => void;
   openEditAppointment: (appointment: Appointment) => void;
   openDayDetails: (date: string) => void;
+  openQuickBook: (date: string, startTime: string, durationMinutes: number) => void;
+  openBookedDetail: (appointment: Appointment) => void;
   closeModals: () => void;
+
+  quickBookAppointment: (customerName: string) => Promise<boolean>;
   addAppointment: (
     apt: Omit<Appointment, 'id' | 'createdAt'>
   ) => { success: boolean; conflictWith?: Appointment };
@@ -48,7 +70,11 @@ interface AppContextType {
   updateSettings: (newSettings: WorkSettings) => void;
   unlockApp: (enteredPin: string) => boolean;
   lockApp: () => void;
+  logoutTechnician: () => Promise<void>;
+
   getDayWorkload: (dateStr: string) => DayWorkload;
+  isSlotOverlapping: (date: string, startTime: string, endTime: string, ignoreId?: string) => Appointment | null;
+  isDayFullyBooked: (dateStr: string) => boolean;
   showNotification: (
     message: string,
     type?: 'success' | 'warning' | 'info' | 'error'
@@ -65,12 +91,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const loaded = loadSettings();
     return loaded.isPinEnabled;
   });
-  const [activeModal, setActiveModal] = useState<'day-details' | 'appointment' | 'settings' | null>(null);
+  const [activeModal, setActiveModal] = useState<'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
+  const [selectedSlotToBook, setSelectedSlotToBook] = useState<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    durationMinutes: number;
+  } | null>(null);
+  const [activePresetId, setActivePresetId] = useState<string>('p1');
+  const [currentUser, setCurrentUser] = useState<TechnicianUser | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'warning' | 'info' | 'error';
   } | null>(null);
+
+  // Initialize current logged in technician user
+  useEffect(() => {
+    getCurrentTechnicianUser().then((user) => {
+      if (user) {
+        setCurrentUser(user);
+      }
+    });
+  }, []);
 
   // Initial cloud sync on mount if Supabase credentials are configured
   useEffect(() => {
@@ -85,6 +130,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSettings(data);
         }
       });
+
+      // Real-time synchronization
+      if (supabase) {
+        const channel = supabase
+          .channel('realtime_appointments_sync')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'appointments' },
+            () => {
+              fetchAppointmentsFromSupabase().then((data) => {
+                if (data) setAppointments(data);
+              });
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase?.removeChannel(channel);
+        };
+      }
     }
   }, []);
 
@@ -122,8 +187,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const logoutTechnician = async () => {
+    await signOutTechnician();
+    setCurrentUser(null);
+    showNotification('تم تسجيل الخروج بنجاح', 'info');
+  };
+
   const getDayWorkload = (dateStr: string): DayWorkload => {
     return calculateDayWorkload(dateStr, appointments, settings);
+  };
+
+  const isDayFullyBooked = (dateStr: string): boolean => {
+    const dayAppointments = appointments.filter((a) => a.date === dateStr);
+    const totalBookedHours = dayAppointments.reduce((sum, a) => sum + (Number(a.durationHours) || 0), 0);
+    const maxWorkingHours = calculateDailyMaxHours(settings.workStartTime, settings.workEndTime) || 13;
+    return totalBookedHours >= maxWorkingHours;
+  };
+
+  const isSlotOverlapping = (
+    date: string,
+    startTime: string,
+    endTime: string,
+    ignoreId?: string
+  ): Appointment | null => {
+    const found = appointments.find(
+      (a) =>
+        a.date === date &&
+        a.id !== ignoreId &&
+        isTimeOverlapping(startTime, endTime, a.startTime, a.endTime)
+    );
+    return found || null;
   };
 
   const openNewAppointment = (date?: string) => {
@@ -142,34 +235,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveModal('day-details');
   };
 
+  const openQuickBook = (date: string, startTime: string, durationMinutes: number) => {
+    const endTime = addMinutesToTime(startTime, durationMinutes);
+    setSelectedSlotToBook({
+      date,
+      startTime,
+      endTime,
+      durationMinutes,
+    });
+    setActiveModal('quick-book');
+  };
+
+  const openBookedDetail = (appointment: Appointment) => {
+    setViewingAppointment(appointment);
+    setActiveModal('booked-detail');
+  };
+
   const closeModals = () => {
     setActiveModal(null);
     setEditingAppointment(null);
+    setSelectedSlotToBook(null);
+    setViewingAppointment(null);
+  };
+
+  const quickBookAppointment = async (customerName: string): Promise<boolean> => {
+    if (!selectedSlotToBook) return false;
+    const { date, startTime, endTime, durationMinutes } = selectedSlotToBook;
+
+    // Check conflict
+    const conflict = isSlotOverlapping(date, startTime, endTime);
+    if (conflict) {
+      showNotification(`الوقت محجوز مسبقاً لموعد [${conflict.customerName}]!`, 'error');
+      return false;
+    }
+
+    const techName = currentUser?.name || 'فني SAFE ZONE';
+    const newAppointment: Appointment = {
+      id: 'apt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      customerName: customerName.trim(),
+      date,
+      startTime,
+      endTime,
+      durationHours: Number((durationMinutes / 60).toFixed(2)),
+      technicianName: techName,
+      bookedByTechnician: techName,
+      technicians: [techName],
+      isCompleted: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    setAppointments((prev) => [...prev, newAppointment]);
+    upsertAppointmentToSupabase(newAppointment);
+
+    showNotification(`تم حجز موعد [${customerName}] بواسطة ${techName} بنجاح ✓`, 'success');
+    closeModals();
+    return true;
   };
 
   const addAppointment = (
     apt: Omit<Appointment, 'id' | 'createdAt'>
   ): { success: boolean; conflictWith?: Appointment } => {
-    // Check overlapping conflicts on the same date
     const conflict = appointments.find(
       (existing) =>
         existing.date === apt.date &&
         isTimeOverlapping(apt.startTime, apt.endTime, existing.startTime, existing.endTime)
     );
 
+    const techName = apt.bookedByTechnician || apt.technicianName || currentUser?.name || 'فني SAFE ZONE';
     const newAppointment: Appointment = {
       ...apt,
+      technicianName: techName,
+      bookedByTechnician: techName,
       id: 'apt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       createdAt: new Date().toISOString(),
     };
 
     setAppointments((prev) => [...prev, newAppointment]);
-
-    // Async sync to Supabase if configured
     upsertAppointmentToSupabase(newAppointment);
 
     if (conflict) {
-      showNotification(`تنبيه: تم حفظ الموعد، لكن يوجد تضارب في الوقت مع موعد [${conflict.customerName}]!`, 'warning');
+      showNotification(`تنبيه: تم حفظ الموعد، لكن يوجد تضارب مع موعد [${conflict.customerName}]!`, 'warning');
       return { success: true, conflictWith: conflict };
     }
 
@@ -188,10 +333,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (item.id !== id) return item;
         const updated = { ...item, ...aptUpdate };
 
-        // Async sync to Supabase if configured
         upsertAppointmentToSupabase(updated);
 
-        // Check if overlaps with any OTHER appointment on same date
         conflict = prev.find(
           (other) =>
             other.id !== id &&
@@ -216,9 +359,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAppointments((prev) => prev.filter((a) => a.id !== id));
     deleteAppointmentFromSupabase(id);
     showNotification('تم حذف الموعد', 'info');
+    closeModals();
   };
 
-  // Simple single-click checklist checkpoint (اكتمل / قيد التنفيذ)
   const toggleComplete = (id: string) => {
     setAppointments((prev) =>
       prev.map((a) => {
@@ -232,6 +375,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               : `تم تحويل موعد [${a.customerName}] إلى قيد التنفيذ`,
             'success'
           );
+          if (viewingAppointment?.id === id) {
+            setViewingAppointment(updated);
+          }
           return updated;
         }
         return a;
@@ -255,14 +401,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isSupabaseConnected: isSupabaseConfigured,
         activeModal,
         editingAppointment,
+        viewingAppointment,
+        selectedSlotToBook,
+        activePresetId,
+        currentUser,
+        isAuthModalOpen,
         notification,
         setSelectedDate,
         setActiveModal,
         setEditingAppointment,
+        setViewingAppointment,
+        setSelectedSlotToBook,
+        setActivePresetId,
+        setIsAuthModalOpen,
+        setCurrentUser,
         openNewAppointment,
         openEditAppointment,
         openDayDetails,
+        openQuickBook,
+        openBookedDetail,
         closeModals,
+        quickBookAppointment,
         addAppointment,
         updateAppointment,
         deleteAppointment,
@@ -270,7 +429,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSettings,
         unlockApp,
         lockApp,
+        logoutTechnician,
         getDayWorkload,
+        isSlotOverlapping,
+        isDayFullyBooked,
         showNotification,
       }}
     >
@@ -286,3 +448,4 @@ export const useApp = () => {
   }
   return context;
 };
+

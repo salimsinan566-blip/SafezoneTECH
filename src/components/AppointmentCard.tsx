@@ -28,19 +28,25 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
   const handleCall = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.location.href = `tel:${appointment.customerPhone}`;
+    if (appointment.customerPhone) {
+      window.location.href = `tel:${appointment.customerPhone}`;
+    }
   };
 
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const cleanPhone = appointment.customerPhone.replace(/[^0-9]/g, '');
-    window.open(`https://wa.me/${cleanPhone}`, '_blank');
+    if (appointment.customerPhone) {
+      const cleanPhone = appointment.customerPhone.replace(/[^0-9]/g, '');
+      window.open(`https://wa.me/${cleanPhone}`, '_blank');
+    }
   };
 
   const handleOpenMaps = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const query = encodeURIComponent(appointment.location);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    if (appointment.location) {
+      const query = encodeURIComponent(appointment.location);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -79,7 +85,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
               <Camera className="w-3.5 h-3.5 text-amber-700" />
               <span>{appointment.serviceName}</span>
-              {appointment.camerasCount > 0 && (
+              {Boolean(appointment.camerasCount && appointment.camerasCount > 0) && (
                 <span className="mr-1 bg-amber-400/50 px-1 rounded text-[11px]">
                   ({appointment.camerasCount} كاميرات)
                 </span>
