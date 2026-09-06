@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronRight,
   ChevronLeft,
   ZoomIn,
   ZoomOut,
+  Sliders,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -27,6 +28,8 @@ export const CalendarView: React.FC = () => {
   } = useApp();
 
   const [viewDate, setViewDate] = useState<Date>(() => parseDateKey(selectedDate) || new Date());
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [isPinchActive, setIsPinchActive] = useState<boolean>(false);
   
   // Apple Calendar Zoom Level: compact (pure circles) | medium (events visible) | detailed (full cards)
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(() => {
@@ -47,14 +50,77 @@ export const CalendarView: React.FC = () => {
   };
 
   const handleZoomIn = () => {
-    if (zoomLevel === 'compact') handleSetZoom('medium');
-    else if (zoomLevel === 'medium') handleSetZoom('detailed');
+    setZoomLevel((curr) => {
+      const next: ZoomLevel = curr === 'compact' ? 'medium' : 'detailed';
+      try { localStorage.setItem('safezone_calendar_zoom', next); } catch {}
+      return next;
+    });
   };
 
   const handleZoomOut = () => {
-    if (zoomLevel === 'detailed') handleSetZoom('medium');
-    else if (zoomLevel === 'medium') handleSetZoom('compact');
+    setZoomLevel((curr) => {
+      const next: ZoomLevel = curr === 'detailed' ? 'medium' : 'compact';
+      try { localStorage.setItem('safezone_calendar_zoom', next); } catch {}
+      return next;
+    });
   };
+
+  // Two-Finger Pinch-to-Zoom Gesture (Apple Calendar Touch Gesture on Mobile/iPad)
+  useEffect(() => {
+    const el = calendarRef.current;
+    if (!el) return;
+
+    let initialDist = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        initialDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        setIsPinchActive(true);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && initialDist > 0) {
+        // Prevent default browser viewport zooming so the calendar smoothly scales instead
+        if (e.cancelable) e.preventDefault();
+
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const ratio = currentDist / initialDist;
+
+        // Spreading two fingers apart (Pinch Out -> Zoom In)
+        if (ratio > 1.25) {
+          handleZoomIn();
+          initialDist = currentDist; // Reset reference
+        }
+        // Pinching two fingers together (Pinch In -> Zoom Out)
+        else if (ratio < 0.75) {
+          handleZoomOut();
+          initialDist = currentDist; // Reset reference
+        }
+      }
+    };
+
+    const onTouchEnd = () => {
+      initialDist = 0;
+      setIsPinchActive(false);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchcancel', onTouchEnd);
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, []);
 
   // Optional Ctrl + Mouse Wheel zoom support like macOS Apple Calendar
   useEffect(() => {
@@ -135,13 +201,24 @@ export const CalendarView: React.FC = () => {
   const todayKey = formatDateKey(new Date());
 
   return (
-    <div className={`mx-auto space-y-3 sm:space-y-4 transition-all duration-300 w-full ${
-      zoomLevel === 'compact'
-        ? 'max-w-3xl'
-        : zoomLevel === 'medium'
-        ? 'max-w-5xl'
-        : 'max-w-6xl'
-    }`}>
+    <div
+      ref={calendarRef}
+      className={`mx-auto space-y-3 sm:space-y-4 transition-all duration-300 w-full select-none ${
+        zoomLevel === 'compact'
+          ? 'max-w-3xl'
+          : zoomLevel === 'medium'
+          ? 'max-w-5xl'
+          : 'max-w-6xl'
+      }`}
+    >
+      {/* Visual Gesture Badge (Shown while user is pinching with fingers) */}
+      {isPinchActive && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-4 py-2 rounded-2xl shadow-2xl text-xs font-black flex items-center gap-2 animate-in fade-in border border-white/20">
+          <ZoomIn className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <span>تكبير / تصغير بإصبعين: {zoomLevel === 'compact' ? 'مدمج' : zoomLevel === 'medium' ? 'مواعيد' : 'مكبّر'}</span>
+        </div>
+      )}
+
       {/* Apple-style Calendar Card */}
       <div className="bg-white rounded-2xl sm:rounded-[28px] border border-neutral-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden transition-all w-full">
         
@@ -188,74 +265,97 @@ export const CalendarView: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 2: Apple Zoom Segmented Controls (Full width touch bar on mobile) */}
-          <div className="flex items-center justify-between gap-1 bg-neutral-100/90 p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs w-full sm:w-fit sm:mx-auto">
-            <button
-              type="button"
-              onClick={handleZoomOut}
-              disabled={zoomLevel === 'compact'}
-              title="تصغير الكالندر (Ctrl + Scroll Down)"
-              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
-                zoomLevel === 'compact'
-                  ? 'text-neutral-300 cursor-not-allowed'
-                  : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
-              }`}
-            >
-              <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-            </button>
-
-            <div className="flex items-center gap-0.5 sm:gap-1 flex-1 sm:flex-initial px-0.5">
+          {/* Row 2: Apple Zoom Controls + Touch Slider (Drag with finger or tap) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-neutral-100/90 p-1.5 sm:p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs w-full sm:w-fit sm:mx-auto">
+            {/* Quick Zoom Buttons & Segmented Tabs */}
+            <div className="flex items-center justify-between w-full sm:w-auto gap-1">
               <button
                 type="button"
-                onClick={() => handleSetZoom('compact')}
-                title="القياس المدمج (دوائر فقط)"
-                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                onClick={handleZoomOut}
+                disabled={zoomLevel === 'compact'}
+                title="تصغير الكالندر (Ctrl + Scroll Down)"
+                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
                   zoomLevel === 'compact'
-                    ? 'bg-black text-white shadow-xs'
-                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                    ? 'text-neutral-300 cursor-not-allowed'
+                    : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
                 }`}
               >
-                مدمج
+                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </button>
+
+              <div className="flex items-center gap-0.5 sm:gap-1 flex-1 sm:flex-initial px-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleSetZoom('compact')}
+                  title="القياس المدمج (دوائر فقط)"
+                  className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                    zoomLevel === 'compact'
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                  }`}
+                >
+                  مدمج
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetZoom('medium')}
+                  title="قياس المواعيد (شرائح المواعيد)"
+                  className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                    zoomLevel === 'medium'
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                  }`}
+                >
+                  مواعيد
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetZoom('detailed')}
+                  title="القياس المكبر (تفاصيل كاملة)"
+                  className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                    zoomLevel === 'detailed'
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                  }`}
+                >
+                  مكبّر
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => handleSetZoom('medium')}
-                title="قياس المواعيد (شرائح المواعيد)"
-                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
-                  zoomLevel === 'medium'
-                    ? 'bg-black text-white shadow-xs'
-                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                }`}
-              >
-                مواعيد
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetZoom('detailed')}
-                title="القياس المكبر (تفاصيل كاملة)"
-                className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all text-center ${
+                onClick={handleZoomIn}
+                disabled={zoomLevel === 'detailed'}
+                title="تكبير الكالندر (Ctrl + Scroll Up)"
+                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
                   zoomLevel === 'detailed'
-                    ? 'bg-black text-white shadow-xs'
-                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
+                    ? 'text-neutral-300 cursor-not-allowed'
+                    : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
                 }`}
               >
-                مكبّر
+                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleZoomIn}
-              disabled={zoomLevel === 'detailed'}
-              title="تكبير الكالندر (Ctrl + Scroll Up)"
-              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
-                zoomLevel === 'detailed'
-                  ? 'text-neutral-300 cursor-not-allowed'
-                  : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
-              }`}
-            >
-              <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-            </button>
+            {/* Apple Touch Slider: Drag with your finger left & right */}
+            <div className="flex items-center gap-2 px-2 py-0.5 w-full sm:w-auto border-t sm:border-t-0 sm:border-r border-neutral-200/80">
+              <span className="text-[10px] font-bold text-neutral-500 shrink-0">سحب بإصبعك:</span>
+              <input
+                type="range"
+                min={0}
+                max={2}
+                step={1}
+                value={zoomLevel === 'compact' ? 0 : zoomLevel === 'medium' ? 1 : 2}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v === 0) handleSetZoom('compact');
+                  else if (v === 1) handleSetZoom('medium');
+                  else if (v === 2) handleSetZoom('detailed');
+                }}
+                className="w-full sm:w-24 h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
+                title="اسحب بإصبعك لتكبير وتصغير الكالندر"
+              />
+            </div>
           </div>
         </div>
 
