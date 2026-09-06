@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { X, Clock, Calendar, CheckCircle2, Trash2, User } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatTimeArabic, parseDateKey, ARABIC_DAYS, ARABIC_MONTHS } from '../utils/dateUtils';
@@ -97,10 +97,10 @@ export const BookedAppointmentModal: React.FC = () => {
           <div className="flex items-center justify-between py-2 border-b border-neutral-100">
             <span className="text-neutral-500 flex items-center gap-1.5 font-medium">
               <Clock className="w-4 h-4 text-black" />
-              الوقت والمدة
+              الساعة المحجوزة
             </span>
-            <span className="font-bold font-mono text-black">
-              {formatTimeArabic(startTime)} ← {formatTimeArabic(endTime)} ({durationHours} س)
+            <span className="font-bold font-mono text-black text-sm">
+              {formatTimeArabic(startTime)}
             </span>
           </div>
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Clock, Calendar, UserCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatTimeArabic, parseDateKey, ARABIC_DAYS, ARABIC_MONTHS } from '../utils/dateUtils';
@@ -66,9 +66,9 @@ export const QuickBookModal: React.FC = () => {
               <Calendar className="w-4 h-4 text-black" />
               <span>{dayName}، {dayNum} {monthName} ({date})</span>
             </div>
-            <div className="flex items-center gap-1.5 font-mono font-bold text-black">
+            <div className="flex items-center gap-1.5 font-mono font-black text-black text-sm">
               <Clock className="w-4 h-4 text-black" />
-              <span>{formatTimeArabic(startTime)} ← {formatTimeArabic(endTime)}</span>
+              <span>الساعة: {formatTimeArabic(startTime)}</span>
             </div>
           </div>
 

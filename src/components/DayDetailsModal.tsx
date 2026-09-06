@@ -176,26 +176,31 @@ export const DayDetailsModal: React.FC = () => {
               <div key={hour} className="space-y-1">
                 {/* Main Hour Card */}
                 {isBooked ? (
-                  // Booked Slot Card
+                  // Booked Slot Card - Keeps the hour slot itself CLEAR AND PROMINENT
                   <div
                     onClick={() => overlapApt && openBookedDetail(overlapApt)}
                     className="w-full p-3 rounded-2xl bg-neutral-900 text-white flex items-center justify-between cursor-pointer hover:bg-neutral-800 transition-colors shadow-xs"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-neutral-800 text-neutral-300">
-                        <Lock className="w-4 h-4" />
-                      </span>
-                      <div>
+                    <div className="flex items-center gap-3">
+                      {/* Fixed Hour Display - Clear & Identical to available slots */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="p-1.5 rounded-lg bg-neutral-800 text-neutral-300">
+                          <Lock className="w-4 h-4" />
+                        </span>
+                        <span className="font-mono text-xs sm:text-sm font-black text-white">
+                          {formatTimeArabic(slotStart)}
+                        </span>
+                      </div>
+
+                      {/* Customer and Technician Info */}
+                      <div className="border-r border-neutral-700 pr-3 mr-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-neutral-300">
-                            {formatTimeArabic(overlapApt!.startTime)} - {formatTimeArabic(overlapApt!.endTime)}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700">
+                          <div className="text-sm font-black text-white truncate">
+                            {overlapApt!.customerName}
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700 shrink-0">
                             محجوز
                           </span>
-                        </div>
-                        <div className="text-sm font-black text-white mt-0.5">
-                          {overlapApt!.customerName}
                         </div>
                         <div className="text-[10px] text-neutral-400">
                           حجز بواسطة: <span className="text-neutral-200 font-bold">{overlapApt!.bookedByTechnician || overlapApt!.technicianName || 'فني'}</span>
