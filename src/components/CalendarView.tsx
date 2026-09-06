@@ -3,7 +3,6 @@ import {
   ChevronRight,
   ChevronLeft,
   ZoomIn,
-  ZoomOut,
   Clock,
   User,
   CheckCircle2,
@@ -21,7 +20,7 @@ import {
   formatTimeArabic,
 } from '../utils/dateUtils';
 
-type ZoomLevel = 'compact' | 'medium' | 'detailed' | 'ultra';
+type ZoomLevel = 'compact' | 'ultra';
 
 export const CalendarView: React.FC = () => {
   const {
@@ -37,11 +36,11 @@ export const CalendarView: React.FC = () => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const [isPinchActive, setIsPinchActive] = useState<boolean>(false);
   
-  // Apple Calendar Zoom Level: compact (pure circles) | medium (events visible) | detailed (full cards) | ultra (giant cells with all hours)
+  // Apple Calendar Display Mode: 'compact' (pure circles) | 'ultra' (full appointments & hours)
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(() => {
     try {
       const saved = localStorage.getItem('safezone_calendar_zoom');
-      if (saved === 'compact' || saved === 'medium' || saved === 'detailed' || saved === 'ultra') {
+      if (saved === 'compact' || saved === 'ultra') {
         return saved;
       }
     } catch {}
@@ -61,25 +60,11 @@ export const CalendarView: React.FC = () => {
   const [showPastDaysInUltra, setShowPastDaysInUltra] = useState<boolean>(false);
 
   const handleZoomIn = () => {
-    setZoomLevel((curr) => {
-      let next: ZoomLevel = 'ultra';
-      if (curr === 'compact') next = 'medium';
-      else if (curr === 'medium') next = 'detailed';
-      else if (curr === 'detailed') next = 'ultra';
-      try { localStorage.setItem('safezone_calendar_zoom', next); } catch {}
-      return next;
-    });
+    handleSetZoom('ultra');
   };
 
   const handleZoomOut = () => {
-    setZoomLevel((curr) => {
-      let next: ZoomLevel = 'compact';
-      if (curr === 'ultra') next = 'detailed';
-      else if (curr === 'detailed') next = 'medium';
-      else if (curr === 'medium') next = 'compact';
-      try { localStorage.setItem('safezone_calendar_zoom', next); } catch {}
-      return next;
-    });
+    handleSetZoom('compact');
   };
 
   // Two-Finger Pinch-to-Zoom Gesture (Apple Calendar Touch Gesture on Mobile/iPad)
@@ -243,13 +228,7 @@ export const CalendarView: React.FC = () => {
     <div
       ref={calendarRef}
       className={`mx-auto space-y-3 sm:space-y-4 transition-all duration-300 w-full select-none ${
-        zoomLevel === 'compact'
-          ? 'max-w-3xl'
-          : zoomLevel === 'medium'
-          ? 'max-w-5xl'
-          : zoomLevel === 'detailed'
-          ? 'max-w-6xl'
-          : 'max-w-7xl'
+        zoomLevel === 'compact' ? 'max-w-3xl' : 'max-w-7xl'
       }`}
     >
       {/* Visual Gesture Badge (Shown while user is pinching with fingers) */}
@@ -257,9 +236,7 @@ export const CalendarView: React.FC = () => {
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-4 py-2 rounded-2xl shadow-2xl text-xs font-black flex items-center gap-2 animate-in fade-in border border-white/20">
           <ZoomIn className="w-4 h-4 text-emerald-400 animate-pulse" />
           <span>
-            تكبير / تصغير بإصبعين: {
-              zoomLevel === 'compact' ? 'مدمج' : zoomLevel === 'medium' ? 'مواعيد' : zoomLevel === 'detailed' ? 'مكبّر' : 'فائق (Ultra)'
-            }
+            وضع العرض: {zoomLevel === 'compact' ? 'مدمج' : 'فائق'}
           </span>
         </div>
       )}
@@ -267,7 +244,7 @@ export const CalendarView: React.FC = () => {
       {/* Apple-style Calendar Card */}
       <div className="bg-white rounded-2xl sm:rounded-[28px] border border-neutral-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden transition-all w-full">
         
-        {/* Apple Top Header: Structured into 2 responsive rows for mobile perfection */}
+        {/* Apple Top Header: Structured into 2 responsive rows */}
         <div className="p-3 sm:px-7 sm:py-5 border-b border-neutral-100 space-y-2.5 sm:space-y-3 bg-white">
           {/* Row 1: Month/Year Title + Navigation Arrows */}
           <div className="flex items-center justify-between gap-2">
@@ -310,111 +287,34 @@ export const CalendarView: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 2: Apple Zoom Controls + Touch Slider (Drag with finger or tap) */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-neutral-100/90 p-1.5 sm:p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs w-full sm:w-fit sm:mx-auto">
-            {/* Quick Zoom Buttons & Segmented Tabs */}
-            <div className="flex items-center justify-between w-full sm:w-auto gap-1">
+          {/* Row 2: Two-Option Apple Switch (مدمج / فائق) */}
+          <div className="flex items-center justify-center pt-1 sm:pt-0">
+            <div className="flex items-center gap-1 bg-neutral-100/90 p-1 rounded-2xl border border-neutral-200/60 shadow-2xs">
               <button
                 type="button"
-                onClick={handleZoomOut}
-                disabled={zoomLevel === 'compact'}
-                title="تصغير الكالندر (Ctrl + Scroll Down)"
-                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                onClick={() => handleSetZoom('compact')}
+                className={`px-4 sm:px-6 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-1.5 ${
                   zoomLevel === 'compact'
-                    ? 'text-neutral-300 cursor-not-allowed'
-                    : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
                 }`}
               >
-                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                <span>مدمج</span>
+                <span className="text-[11px] opacity-80">🟢</span>
               </button>
-
-              <div className="flex items-center gap-0.5 sm:gap-1 flex-1 sm:flex-initial px-0.5">
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('compact')}
-                  title="القياس المدمج (دوائر فقط)"
-                  className={`flex-1 sm:flex-initial px-2 sm:px-2.5 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition-all text-center ${
-                    zoomLevel === 'compact'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  مدمج
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('medium')}
-                  title="قياس المواعيد (شرائح المواعيد)"
-                  className={`flex-1 sm:flex-initial px-2 sm:px-2.5 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition-all text-center ${
-                    zoomLevel === 'medium'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  مواعيد
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('detailed')}
-                  title="القياس المكبر (تفاصيل كاملة)"
-                  className={`flex-1 sm:flex-initial px-2 sm:px-2.5 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition-all text-center ${
-                    zoomLevel === 'detailed'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  مكبّر
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetZoom('ultra')}
-                  title="القياس الفائق العملاق (خلايا عملاقة مع جميع المواعيد والساعات)"
-                  className={`flex-1 sm:flex-initial px-2 sm:px-2.5 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition-all text-center ${
-                    zoomLevel === 'ultra'
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-neutral-600 hover:text-black hover:bg-white/60'
-                  }`}
-                >
-                  فائق 🔍
-                </button>
-              </div>
 
               <button
                 type="button"
-                onClick={handleZoomIn}
-                disabled={zoomLevel === 'ultra'}
-                title="تكبير الكالندر (Ctrl + Scroll Up)"
-                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all shrink-0 ${
+                onClick={() => handleSetZoom('ultra')}
+                className={`px-4 sm:px-6 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-1.5 ${
                   zoomLevel === 'ultra'
-                    ? 'text-neutral-300 cursor-not-allowed'
-                    : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95 shadow-2xs'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-black hover:bg-white/60'
                 }`}
               >
-                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                <span>فائق</span>
+                <span className="text-[11px] opacity-80">🔍</span>
               </button>
-            </div>
-
-            {/* Apple Touch Slider: Drag with your finger left & right across 4 levels */}
-            <div className="flex items-center gap-2 px-2 py-0.5 w-full sm:w-auto border-t sm:border-t-0 sm:border-r border-neutral-200/80">
-              <span className="text-[10px] font-bold text-neutral-500 shrink-0">سحب بإصبعك:</span>
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={1}
-                value={
-                  zoomLevel === 'compact' ? 0 : zoomLevel === 'medium' ? 1 : zoomLevel === 'detailed' ? 2 : 3
-                }
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (v === 0) handleSetZoom('compact');
-                  else if (v === 1) handleSetZoom('medium');
-                  else if (v === 2) handleSetZoom('detailed');
-                  else if (v === 3) handleSetZoom('ultra');
-                }}
-                className="w-full sm:w-28 h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                title="اسحب بإصبعك لتكبير وتصغير الكالندر"
-              />
             </div>
           </div>
         </div>
@@ -744,10 +644,6 @@ export const CalendarView: React.FC = () => {
           } ${
             zoomLevel === 'compact'
               ? 'gap-y-2 sm:gap-y-3 gap-x-0.5 sm:gap-x-2 p-1.5 sm:p-6'
-              : zoomLevel === 'medium'
-              ? 'gap-1 sm:gap-2 p-1 sm:p-5'
-              : zoomLevel === 'detailed'
-              ? 'gap-1 sm:gap-2.5 p-1 sm:p-5'
               : 'gap-1.5 sm:gap-3 p-1 sm:p-5'
           }`}>
           {calendarCells.map((cell) => {
@@ -764,11 +660,7 @@ export const CalendarView: React.FC = () => {
                 <div
                   key={cell.dateKey}
                   className={`flex flex-col items-center justify-center p-0.5 opacity-20 cursor-default min-w-0 ${
-                    zoomLevel === 'medium'
-                      ? 'min-h-[60px] sm:min-h-[95px]'
-                      : zoomLevel === 'detailed'
-                      ? 'min-h-[85px] sm:min-h-[140px]'
-                      : zoomLevel === 'ultra'
+                    zoomLevel === 'ultra'
                       ? 'min-h-[140px] sm:min-h-[220px]'
                       : ''
                   }`}
@@ -830,185 +722,7 @@ export const CalendarView: React.FC = () => {
               );
             }
 
-            // LEVEL 2: MEDIUM VIEW (Events visible as sleek pills)
-            if (zoomLevel === 'medium') {
-              return (
-                <div
-                  key={cell.dateKey}
-                  onClick={() => openDayDetails(cell.dateKey)}
-                  className={`group relative flex flex-col p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer min-h-[68px] sm:min-h-[105px] text-right min-w-0 overflow-hidden ${
-                    isPast
-                      ? 'bg-neutral-50/60 border-neutral-200/70 hover:bg-neutral-100/60'
-                      : isFull
-                      ? 'bg-red-50/30 border-red-200 hover:border-red-400 shadow-2xs'
-                      : hasWork
-                      ? 'bg-orange-50/20 border-orange-200/80 hover:border-orange-400 shadow-2xs'
-                      : 'bg-white border-neutral-200/80 hover:border-black/30 shadow-2xs hover:shadow-xs'
-                  }`}
-                >
-                  {/* Top Bar: Circle Day Number + Status/Today */}
-                  <div className="flex items-center justify-between mb-0.5 sm:mb-1 min-w-0">
-                    <div
-                      className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs leading-none shrink-0 ${
-                        isPast
-                          ? 'border border-neutral-300 text-neutral-500 bg-neutral-100'
-                          : isFull
-                          ? 'border border-red-500 bg-red-500 text-white'
-                          : hasWork
-                          ? 'border border-orange-500 bg-orange-50 text-orange-950 font-black'
-                          : 'border border-emerald-500 bg-emerald-50 text-emerald-950 font-black'
-                      }`}
-                    >
-                      {cell.dayNumber}
-                    </div>
-
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {isToday && (
-                        <span className="px-1 py-0.2 rounded text-[8px] sm:text-[9px] font-black bg-red-100 text-red-600 leading-none">
-                          اليوم
-                        </span>
-                      )}
-                      {aptCount > 0 && !isToday && (
-                        <span className="text-[9px] sm:text-[10px] font-bold text-neutral-400 font-mono">
-                          {aptCount}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Event Chips (Up to 2) */}
-                  <div className="flex-1 flex flex-col gap-0.5 sm:gap-1 overflow-hidden min-w-0">
-                    {dayApts.slice(0, 2).map((apt) => (
-                      <div
-                        key={apt.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openBookedDetail(apt);
-                        }}
-                        title={`${formatTimeArabic(apt.startTime)}: ${apt.customerName} (${apt.bookedByTechnician || apt.technicianName || 'فني'})`}
-                        className={`w-full px-1 py-0.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-bold truncate transition-all shadow-2xs flex items-center gap-0.5 sm:gap-1 text-right min-w-0 ${
-                          isPast
-                            ? 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'
-                            : 'bg-neutral-900 text-white hover:bg-neutral-800'
-                        }`}
-                      >
-                        <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full shrink-0 ${isPast ? 'bg-neutral-400' : 'bg-emerald-400'}`}></span>
-                        <span className="font-mono text-[7px] sm:text-[9px] text-neutral-300 shrink-0">{apt.startTime}</span>
-                        <span className="truncate text-[8px] sm:text-[10px]">{apt.customerName}</span>
-                      </div>
-                    ))}
-
-                    {aptCount > 2 && (
-                      <span className="text-[8px] sm:text-[9px] font-black text-neutral-500 text-right pr-0.5 truncate">
-                        +{aptCount - 2} المزيد
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-
-            // LEVEL 3: DETAILED VIEW (Standard cards)
-            if (zoomLevel === 'detailed') {
-              return (
-                <div
-                  key={cell.dateKey}
-                  onClick={() => openDayDetails(cell.dateKey)}
-                  className={`group relative flex flex-col p-1 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer min-h-[95px] sm:min-h-[155px] text-right min-w-0 overflow-hidden ${
-                    isPast
-                      ? 'bg-neutral-50/70 border-neutral-200/80 hover:bg-neutral-100/70'
-                      : isFull
-                      ? 'bg-red-50/40 border-red-300 hover:border-red-500 shadow-2xs'
-                      : hasWork
-                      ? 'bg-orange-50/30 border-orange-200/90 hover:border-orange-400 shadow-2xs'
-                      : 'bg-white border-neutral-200 hover:border-black/40 shadow-2xs hover:shadow-xs'
-                  }`}
-                >
-                  {/* Header: Day number circle + compact status badge */}
-                  <div className="flex items-center justify-between mb-1 sm:mb-2 min-w-0">
-                    <div
-                      className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-[10px] sm:text-sm leading-none shrink-0 ${
-                        isPast
-                          ? 'border border-neutral-300 text-neutral-500 bg-neutral-100'
-                          : isFull
-                          ? 'border sm:border-2 border-red-500 bg-red-500 text-white shadow-2xs'
-                          : hasWork
-                          ? 'border sm:border-2 border-orange-500 bg-orange-50 text-orange-950 font-black shadow-2xs'
-                          : 'border sm:border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-black shadow-2xs'
-                      }`}
-                    >
-                      {cell.dayNumber}
-                    </div>
-
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {isToday && (
-                        <span className="px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black bg-red-100 text-red-600">
-                          اليوم
-                        </span>
-                      )}
-                      {isPast ? (
-                        <span className="text-[8px] sm:text-[10px] font-bold text-neutral-400">
-                          سابق
-                        </span>
-                      ) : isFull ? (
-                        <span className="px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black bg-red-500 text-white">
-                          مقبط
-                        </span>
-                      ) : hasWork ? (
-                        <span className="px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black bg-orange-100 text-orange-800 border border-orange-200">
-                          {aptCount}
-                        </span>
-                      ) : (
-                        <span className="text-[8px] sm:text-[10px] font-bold text-emerald-600">
-                          متاح
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Event Cards (Up to 3) */}
-                  <div className="flex-1 flex flex-col gap-1 sm:gap-1.5 overflow-hidden min-w-0">
-                    {dayApts.slice(0, 3).map((apt) => (
-                      <div
-                        key={apt.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openBookedDetail(apt);
-                        }}
-                        className={`p-1 sm:p-1.5 rounded-lg sm:rounded-xl text-right transition-all border shadow-2xs space-y-0.2 sm:space-y-0.5 min-w-0 ${
-                          isPast
-                            ? 'bg-neutral-100 text-neutral-700 border-neutral-200 hover:bg-neutral-200'
-                            : 'bg-neutral-900 text-white border-neutral-800 hover:bg-neutral-800'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-[8px] sm:text-[10px] min-w-0">
-                          <span className="font-mono font-black text-emerald-400 shrink-0">
-                            {apt.startTime}
-                          </span>
-                          {apt.isCompleted && (
-                            <span className="text-[8px] sm:text-[9px] text-emerald-300 font-bold shrink-0">✓</span>
-                          )}
-                        </div>
-                        <div className="font-black text-[8px] sm:text-[11px] truncate text-white block w-full">
-                          {apt.customerName}
-                        </div>
-                        <div className="hidden sm:block text-[9px] text-neutral-400 truncate">
-                          بواسطة: {apt.bookedByTechnician || apt.technicianName || 'فني'}
-                        </div>
-                      </div>
-                    ))}
-
-                    {aptCount > 3 && (
-                      <span className="text-[8px] sm:text-[10px] font-black text-neutral-600 text-center py-0.2 truncate">
-                        +{aptCount - 3} المزيد
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-
-            // LEVEL 4: ULTRA ZOOM (Giant cells showing ALL appointments, full hours, and details!)
+            // LEVEL 2: ULTRA VIEW (Giant cells showing ALL appointments, full hours, and details!)
             return (
               <div
                 key={cell.dateKey}
