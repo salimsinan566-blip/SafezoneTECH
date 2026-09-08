@@ -9,6 +9,7 @@ import {
   LayoutList,
   LayoutGrid,
   Plus,
+  ClipboardList,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -30,6 +31,7 @@ export const CalendarView: React.FC = () => {
     openBookedDetail,
     isDayFullyBooked,
     appointments,
+    openTodayLog,
   } = useApp();
 
   const [viewDate, setViewDate] = useState<Date>(() => parseDateKey(selectedDate) || new Date());
@@ -257,33 +259,48 @@ export const CalendarView: React.FC = () => {
               </span>
             </div>
 
-            {/* Apple-style Segmented Month Navigation */}
-            <div className="flex items-center gap-0.5 sm:gap-1 bg-neutral-100/90 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs shrink-0">
+            {/* Apple-style Segmented Month Navigation & Today Log Button */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                onClick={handlePrevMonth}
-                title="الشهر السابق"
-                className="p-1 sm:p-2 rounded-lg sm:rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
+                onClick={openTodayLog}
+                title="سجل مواعيد اليوم"
+                className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 active:scale-95 transition-all shadow-2xs"
               >
-                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                <ClipboardList className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">سجل اليوم</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">
+                  {(appointments || []).filter((a) => a && a.date === todayKey).length}
+                </span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleGoToday}
-                className="px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold text-neutral-800 hover:text-black hover:bg-white active:scale-95 transition-all"
-              >
-                اليوم
-              </button>
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-neutral-100/90 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-neutral-200/50 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  title="الشهر السابق"
+                  className="p-1 sm:p-2 rounded-lg sm:rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
+                >
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                </button>
 
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                title="الشهر التالي"
-                className="p-1 sm:p-2 rounded-lg sm:rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
-              >
-                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-              </button>
+                <button
+                  type="button"
+                  onClick={handleGoToday}
+                  className="px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold text-neutral-800 hover:text-black hover:bg-white active:scale-95 transition-all"
+                >
+                  اليوم
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  title="الشهر التالي"
+                  className="p-1 sm:p-2 rounded-lg sm:rounded-xl text-neutral-600 hover:text-black hover:bg-white active:scale-95 transition-all"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                </button>
+              </div>
             </div>
           </div>
 

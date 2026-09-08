@@ -11,10 +11,12 @@ import {
   CheckCircle2,
   Calendar,
   Wrench,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ServicePackage } from '../types';
-import { addHoursToTime, formatTimeArabic, isTimeOverlapping } from '../utils/dateUtils';
+import { addHoursToTime, formatTimeArabic, isTimeOverlapping, formatDateKey } from '../utils/dateUtils';
 
 export const AppointmentModal: React.FC = () => {
   const {
@@ -29,14 +31,28 @@ export const AppointmentModal: React.FC = () => {
 
   const isEdit = Boolean(editingAppointment);
 
+  // Smart initial start time (avoid defaulting to passed morning hours if today)
+  const getInitialStartTime = () => {
+    if (editingAppointment?.startTime) return editingAppointment.startTime;
+    const now = new Date();
+    const todayKey = formatDateKey(now);
+    const chosenDate = editingAppointment?.date || selectedDate;
+    if (chosenDate === todayKey) {
+      const curHour = now.getHours();
+      if (curHour >= 8 && curHour <= 20) {
+        return `${String(curHour).padStart(2, '0')}:00`;
+      }
+    }
+    return settings.workStartTime || '09:00';
+  };
+
   // Form State
   const [customerName, setCustomerName] = useState(editingAppointment?.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(editingAppointment?.customerPhone || '');
   const [location, setLocation] = useState(editingAppointment?.location || '');
   const [date, setDate] = useState(editingAppointment?.date || selectedDate);
-  const [startTime, setStartTime] = useState(
-    editingAppointment?.startTime || settings.workStartTime || '09:00'
-  );
+  const [startTime, setStartTime] = useState(getInitialStartTime);
+  const [showHourPicker, setShowHourPicker] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState(
     editingAppointment?.serviceId || settings.servicePackages[0]?.id || 'custom'
   );
@@ -86,6 +102,37 @@ export const AppointmentModal: React.FC = () => {
       isTimeOverlapping(startTime, endTime, existing.startTime, existing.endTime)
   );
 
+  const startWorkHour = parseInt((settings?.workStartTime || '08:00').split(':')[0], 10) || 8;
+  const endWorkHour = parseInt((settings?.workEndTime || '21:00').split(':')[0], 10) || 21;
+
+  const quickDurations = [
+    { label: '30 د (0.5 س)', hours: 0.5 },
+    { label: '1 ساعة', hours: 1 },
+    { label: '1.5 ساعة', hours: 1.5 },
+    { label: '2 ساعتان', hours: 2 },
+    { label: '3 ساعات', hours: 3 },
+    { label: '4 ساعات', hours: 4 },
+    { label: '5 ساعات', hours: 5 },
+  ];
+
+  // Hours array from startWorkHour to endWorkHour
+  const availableHours = [];
+  for (let h = startWorkHour; h <= endWorkHour; h++) {
+    const timeSlot = `${String(h).padStart(2, '0')}:00`;
+    const nextSlot = `${String(h + 1).padStart(2, '0')}:00`;
+    const slotConflict = appointments.find(
+      (a) =>
+        a.id !== editingAppointment?.id &&
+        a.date === date &&
+        isTimeOverlapping(timeSlot, nextSlot, a.startTime, a.endTime)
+    );
+    availableHours.push({
+      hour: h,
+      time: timeSlot,
+      conflict: slotConflict,
+    });
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
@@ -110,10 +157,12 @@ export const AppointmentModal: React.FC = () => {
       isCompleted,
     };
 
-    if (isEdit && editingAppointment) {
-      updateAppointment(editingAppointment.id, payload);
-    } else {
-      addAppointment(payload);
+    const result = isEdit && editingAppointment
+      ? updateAppointment(editingAppointment.id, payload)
+      : addAppointment(payload);
+
+    if (result && !result.success) {
+      return;
     }
 
     closeModals();
@@ -197,12 +246,12 @@ export const AppointmentModal: React.FC = () => {
 
           {/* Time & Duration Fields */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Date */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">
-                  تاريخ الموعد:
-                </label>
+            {/* Date Picker */}
+            <div>
+              <label className="block text-xs font-black text-slate-700 mb-1">
+                تاريخ الموعد:
+              </label>
+              <div className="relative">
                 <input
                   type="date"
                   value={date}
@@ -211,37 +260,159 @@ export const AppointmentModal: React.FC = () => {
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
+            </div>
 
-              {/* Start Time */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">
-                  وقت البدء:
-                </label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
+            {/* Dedicated Button for Choosing Hours */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowHourPicker((prev) => !prev)}
+                className="w-full p-3.5 rounded-2xl border-2 border-amber-400/90 bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50 hover:from-amber-100 hover:to-orange-100/70 flex items-center justify-between shadow-xs transition-all active:scale-[0.99] group text-right"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm shrink-0">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-black text-slate-900">
+                        ⏱️ زر مخصص لتحديد واختيار الساعات
+                      </span>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-200 text-amber-950">
+                        {showHourPicker ? 'إغلاق المحرر ▲' : 'فتح واختيار الساعات ▼'}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-600 truncate mt-0.5">
+                      الفترة: من <span className="text-amber-800 font-black">{formatTimeArabic(startTime)}</span> حتى <span className="text-amber-800 font-black">{formatTimeArabic(endTime)}</span> ({durationHours} س)
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 p-1.5 rounded-lg bg-amber-200/60 text-amber-900 group-hover:bg-amber-300 transition-colors">
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showHourPicker ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
 
-              {/* Duration in Hours (Manual override possible) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">
-                  المدة المحجوزة (بالساعات):
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  max="24"
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(Number(e.target.value))}
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
+              {/* Dedicated Interactive Hours Picker Panel */}
+              {showHourPicker && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {/* Step 1: Quick Duration Selector */}
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-700 mb-1.5">
+                      1. اختر مدة العمل المطلوبة (بالساعات):
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {quickDurations.map((d) => (
+                        <button
+                          key={d.hours}
+                          type="button"
+                          onClick={() => setDurationHours(d.hours)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-95 ${
+                            durationHours === d.hours
+                              ? 'bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/30 ring-2 ring-amber-400'
+                              : 'bg-white hover:bg-amber-100/60 text-slate-700 border border-slate-200'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Visual Hour Slots Grid */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-black text-slate-700">
+                        2. اضغط لاختيار ساعة البدء (🟢 متاح / 🔴 محجوز لموعد آخر):
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        البدء الحالي: {formatTimeArabic(startTime)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto p-1.5 bg-white rounded-xl border border-slate-200">
+                      {availableHours.map((h) => {
+                        const isSelected = startTime === h.time;
+                        const hasConflict = Boolean(h.conflict);
+
+                        return (
+                          <button
+                            key={h.time}
+                            type="button"
+                            onClick={() => setStartTime(h.time)}
+                            className={`p-2 rounded-xl text-xs font-bold flex flex-col items-center justify-center transition-all text-center ${
+                              isSelected
+                                ? 'bg-slate-950 text-white font-black shadow-md ring-2 ring-amber-500 scale-[1.02]'
+                                : hasConflict
+                                ? 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
+                                : 'bg-neutral-50 hover:bg-amber-50 text-neutral-800 border border-neutral-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1 font-mono font-black">
+                              <span>{hasConflict ? '🔴' : isSelected ? '🟡' : '🟢'}</span>
+                              <span>{formatTimeArabic(h.time)}</span>
+                            </div>
+                            <span className="text-[10px] opacity-85 mt-0.5 truncate max-w-full">
+                              {isSelected
+                                ? '✓ وقت البدء'
+                                : hasConflict
+                                ? (h.conflict?.customerName || 'محجوز')
+                                : 'متاح'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Step 3: Precise Manual Controls (Fine-Tuning) */}
+                  <div className="pt-2 border-t border-amber-200/60">
+                    <label className="block text-[11px] font-black text-slate-700 mb-1.5">
+                      3. تعديل دقيق بالدقائق (اختياري):
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                          وقت البدء:
+                        </span>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold bg-white"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                          المدة (ساعات):
+                        </span>
+                        <input
+                          type="number"
+                          step="0.25"
+                          min="0.25"
+                          max="24"
+                          value={durationHours}
+                          onChange={(e) => setDurationHours(Number(e.target.value))}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Done button */}
+                  <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between">
+                    <div className="text-[11px] font-bold text-slate-600">
+                      الفترة: <span className="font-black text-slate-900">{formatTimeArabic(startTime)}</span> إلى <span className="font-black text-slate-900">{formatTimeArabic(endTime)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowHourPicker(false)}
+                      className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 text-xs font-black shadow-xs transition-all"
+                    >
+                      ✓ اعتماد وتثبيت الوقت
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Calculated End Time Badge */}

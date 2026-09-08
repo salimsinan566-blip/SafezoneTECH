@@ -8,6 +8,7 @@ import { BookedAppointmentModal } from './components/BookedAppointmentModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AppointmentModal } from './components/AppointmentModal';
+import { TodayLogModal } from './components/TodayLogModal';
 import { PinLockModal } from './components/PinLockModal';
 import { AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
 
@@ -66,6 +67,7 @@ export const App: React.FC = () => {
       {activeModal === 'booked-detail' && <BookedAppointmentModal />}
       {activeModal === 'settings' && <SettingsModal />}
       {activeModal === 'appointment' && <AppointmentModal />}
+      {activeModal === 'today-log' && <TodayLogModal />}
 
       {/* Technician Account Authentication Modal */}
       {isAuthModalOpen && <AuthModal />}

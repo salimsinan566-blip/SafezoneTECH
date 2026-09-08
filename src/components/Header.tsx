@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Settings, User, LogOut, LogIn, CheckCircle2 } from 'lucide-react';
+import { Settings, User, LogOut, LogIn, CheckCircle2, ClipboardList } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatDateKey } from '../utils/dateUtils';
 
 export const Header: React.FC = () => {
   const {
@@ -9,9 +10,14 @@ export const Header: React.FC = () => {
     logoutTechnician,
     setIsAuthModalOpen,
     isSupabaseConnected,
+    appointments,
+    openTodayLog,
   } = useApp();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const todayKey = formatDateKey(new Date());
+  const todayCount = (appointments || []).filter((a) => a && a.date === todayKey).length;
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-neutral-200/60 shadow-xs">
@@ -98,6 +104,20 @@ export const Header: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Today's Log Button */}
+            <button
+              onClick={openTodayLog}
+              title="سجل مواعيد اليوم"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/40 bg-amber-50 hover:bg-amber-100 text-slate-950 text-xs font-black transition-all active:scale-95 shadow-2xs"
+            >
+              <ClipboardList className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="hidden sm:inline">سجل مواعيد اليوم</span>
+              <span className="sm:hidden">سجل اليوم</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black leading-none">
+                {todayCount}
+              </span>
+            </button>
 
             {/* Settings Button */}
             <button

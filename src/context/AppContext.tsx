@@ -32,7 +32,7 @@ interface AppContextType {
   selectedDate: string;
   isLocked: boolean;
   isSupabaseConnected: boolean;
-  activeModal: 'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null;
+  activeModal: 'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | 'today-log' | null;
   editingAppointment: Appointment | null;
   viewingAppointment: Appointment | null;
   selectedSlotToBook: { date: string; startTime: string; endTime: string; durationMinutes: number } | null;
@@ -42,7 +42,7 @@ interface AppContextType {
   notification: { message: string; type: 'success' | 'warning' | 'info' | 'error' } | null;
 
   setSelectedDate: (date: string) => void;
-  setActiveModal: (modal: 'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null) => void;
+  setActiveModal: (modal: 'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | 'today-log' | null) => void;
   setEditingAppointment: (appointment: Appointment | null) => void;
   setViewingAppointment: (appointment: Appointment | null) => void;
   setSelectedSlotToBook: (slot: { date: string; startTime: string; endTime: string; durationMinutes: number } | null) => void;
@@ -55,6 +55,7 @@ interface AppContextType {
   openDayDetails: (date: string) => void;
   openQuickBook: (date: string, startTime: string, durationMinutes: number) => void;
   openBookedDetail: (appointment: Appointment) => void;
+  openTodayLog: () => void;
   closeModals: () => void;
 
   quickBookAppointment: (customerName: string) => Promise<boolean>;
@@ -102,7 +103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const loaded = loadSettings();
     return Boolean(loaded?.isPinEnabled);
   });
-  const [activeModal, setActiveModal] = useState<'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | null>(null);
+  const [activeModal, setActiveModal] = useState<'day-details' | 'appointment' | 'settings' | 'quick-book' | 'booked-detail' | 'auth' | 'today-log' | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
   const [selectedSlotToBook, setSelectedSlotToBook] = useState<{
@@ -270,6 +271,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveModal('booked-detail');
   };
 
+  const openTodayLog = () => {
+    setActiveModal('today-log');
+  };
+
   const closeModals = () => {
     setActiveModal(null);
     setEditingAppointment(null);
@@ -281,12 +286,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!selectedSlotToBook) return false;
     const { date, startTime, endTime, durationMinutes } = selectedSlotToBook;
 
-    // Defense against booking in the past
+    // Defense against booking in the past: only for past dates
     const now = new Date();
     const todayKey = formatDateKey(now);
-    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    if (date < todayKey || (date === todayKey && startTime < currentTimeStr)) {
-      showNotification('لا يمكن حجز موعد في تاريخ أو وقت قد مضى!', 'error');
+    if (date < todayKey) {
+      showNotification('لا يمكن حجز موعد في تاريخ يوم قد مضى!', 'error');
       return false;
     }
 
@@ -312,7 +316,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
 
-    setAppointments((prev) => [...prev, newAppointment]);
+    setAppointments((prev) => {
+      const updated = [...prev, newAppointment];
+      saveAppointments(updated);
+      return updated;
+    });
     upsertAppointmentToSupabase(newAppointment);
 
     showNotification(`تم حجز موعد [${customerName}] بواسطة ${techName} بنجاح ✓`, 'success');
@@ -323,11 +331,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAppointment = (
     apt: Omit<Appointment, 'id' | 'createdAt'>
   ): { success: boolean; conflictWith?: Appointment } => {
-    const now = new Date();
-    const todayKey = formatDateKey(now);
-    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    if (apt.date < todayKey || (apt.date === todayKey && apt.startTime < currentTimeStr)) {
-      showNotification('لا يمكن إضافة موعد في تاريخ أو وقت قد مضى!', 'error');
+    if (!apt.customerName || !apt.customerName.trim()) {
+      showNotification('يرجى كتابة اسم العميل أولاً!', 'error');
       return { success: false };
     }
 
@@ -340,21 +345,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const techName = apt.bookedByTechnician || apt.technicianName || currentUser?.name || 'فني SAFE ZONE';
     const newAppointment: Appointment = {
       ...apt,
+      customerName: apt.customerName.trim(),
       technicianName: techName,
       bookedByTechnician: techName,
       id: 'apt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       createdAt: new Date().toISOString(),
     };
 
-    setAppointments((prev) => [...prev, newAppointment]);
+    // Synchronous immediate persistence to localStorage + Supabase
+    setAppointments((prev) => {
+      const updated = [...prev, newAppointment];
+      saveAppointments(updated);
+      return updated;
+    });
     upsertAppointmentToSupabase(newAppointment);
 
     if (conflict) {
-      showNotification(`تنبيه: تم حفظ الموعد، لكن يوجد تضارب مع موعد [${conflict.customerName}]!`, 'warning');
+      showNotification(`تنبيه: تم حفظ الموعد بنجاح، لكن يوجد تضارب مع موعد [${conflict.customerName}]!`, 'warning');
       return { success: true, conflictWith: conflict };
     }
 
-    showNotification('تم تسجيل الموعد بنجاح', 'success');
+    showNotification('تم تسجيل وحفظ الموعد بنجاح ✓', 'success');
     return { success: true };
   };
 
@@ -364,8 +375,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): { success: boolean; conflictWith?: Appointment } => {
     let conflict: Appointment | undefined;
 
-    setAppointments((prev) =>
-      prev.map((item) => {
+    setAppointments((prev) => {
+      const updatedList = prev.map((item) => {
         if (item.id !== id) return item;
         const updated = { ...item, ...aptUpdate };
 
@@ -379,28 +390,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
 
         return updated;
-      })
-    );
+      });
+      saveAppointments(updatedList);
+      return updatedList;
+    });
 
     if (conflict) {
       showNotification(`تنبيه: تم تعديل الموعد، لكن يوجد تضارب مع موعد [${conflict.customerName}]!`, 'warning');
       return { success: true, conflictWith: conflict };
     }
 
-    showNotification('تم تحديث بيانات الموعد', 'success');
+    showNotification('تم تحديث بيانات الموعد وحفظه ✓', 'success');
     return { success: true };
   };
 
   const deleteAppointment = (id: string) => {
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
+    setAppointments((prev) => {
+      const updated = prev.filter((a) => a.id !== id);
+      saveAppointments(updated);
+      return updated;
+    });
     deleteAppointmentFromSupabase(id);
     showNotification('تم حذف الموعد', 'info');
     closeModals();
   };
 
   const toggleComplete = (id: string) => {
-    setAppointments((prev) =>
-      prev.map((a) => {
+    setAppointments((prev) => {
+      const updatedList = prev.map((a) => {
         if (a.id === id) {
           const nextStatus = !a.isCompleted;
           const updated = { ...a, isCompleted: nextStatus };
@@ -417,8 +434,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return updated;
         }
         return a;
-      })
-    );
+      });
+      saveAppointments(updatedList);
+      return updatedList;
+    });
   };
 
   const updateSettings = (newSettings: WorkSettings) => {
@@ -456,6 +475,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openDayDetails,
         openQuickBook,
         openBookedDetail,
+        openTodayLog,
         closeModals,
         quickBookAppointment,
         addAppointment,
